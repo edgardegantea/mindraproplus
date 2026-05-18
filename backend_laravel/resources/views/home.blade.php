@@ -138,7 +138,7 @@
                     </a>
                     <a href="{{ route('dashboard') }}" class="btn-secondary">Ver historial</a>
                 @else
-                    <a href="{{ route('register') }}" class="btn-primary" style="padding:14px 28px;font-size:1rem;">Prueba Mindra gratis</a>
+                    <a href="#planes" class="btn-primary" style="padding:14px 28px;font-size:1rem;">Prueba Mindra gratis</a>
                     <a href="#como-funciona" class="btn-secondary">Saber más</a>
                 @endauth
             </div>
@@ -368,11 +368,11 @@
                     @endforeach
                 </ul>
                 <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px;">
-                    <a href="https://free.mindra.cafined.org" class="btn-secondary" style="width:100%;justify-content:center;">
+                    <a href="https://free.mindra.cafined.org" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="width:100%;justify-content:center;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px;"><path fill-rule="evenodd" d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Zm7.876-2.326a.75.75 0 0 1 .75-.75h3.498a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0V5.31l-5.22 5.22a.75.75 0 1 1-1.06-1.06l5.22-5.22h-1.69a.75.75 0 0 1-.748-.576Z" clip-rule="evenodd"/></svg>
                         Versión Web
                     </a>
-                    <a href="#" class="btn-secondary" style="width:100%;justify-content:center;background:#f0fdf4;border-color:#bbf7d0;color:#15803d;"
+                    <a href="javascript:void(0)" onclick="window.open('https://mindra.cafined.org/assets/mindra-latest.apk','_blank');return false;" class="btn-secondary" style="width:100%;justify-content:center;background:#f0fdf4;border-color:#bbf7d0;color:#15803d;cursor:pointer;"
                        onmouseover="this.style.background=document.documentElement.getAttribute('data-theme')==='dark'?'rgba(74,222,128,.2)':'#dcfce7'" onmouseout="this.style.background=document.documentElement.getAttribute('data-theme')==='dark'?'rgba(74,222,128,.1)':'#f0fdf4'">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px;"><path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"/><path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"/></svg>
                         Descargar APK
