@@ -1,0 +1,25 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Flutter / Dart
+mindra_app/.dart_tool/
+mindra_app/build/
+mindra_app/.flutter-plugins
+mindra_app/.flutter-plugins-dependencies
+mindra_app/.packages
+
+# Laravel
+backend_laravel/vendor/
+backend_laravel/.env
+backend_laravel/storage/logs/*
+backend_laravel/storage/framework/cache/*
+backend_laravel/storage/framework/sessions/*
+backend_laravel/storage/framework/views/*
+backend_laravel/bootstrap/cache/*
+backend_laravel/node_modules/
+
+# Copia de respaldo antigua
+backend_laravel copy/
+ansiedad_app/
