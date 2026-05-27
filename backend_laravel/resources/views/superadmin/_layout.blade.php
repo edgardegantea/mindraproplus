@@ -84,7 +84,7 @@
             </a>
             <a href="{{ route('superadmin.pro-orders') }}" class="sa-sidebar-link {{ request()->routeIs('superadmin.pro-orders*') ? 'active' : '' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" clip-rule="evenodd"/></svg>
-                Órdenes Pro
+                Solicitudes Plus
             </a>
             <a href="{{ route('superadmin.groups') }}" class="sa-sidebar-link {{ request()->routeIs('superadmin.groups*') ? 'active' : '' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z"/></svg>
@@ -134,9 +134,66 @@
 
         <div class="sa-content">
             @if(session('success'))
-                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#16a34a" style="width:18px;height:18px;flex-shrink:0;"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
-                    <p style="font-size:.875rem;color:#15803d;margin:0;">{{ session('success') }}</p>
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#16a34a" style="width:18px;height:18px;flex-shrink:0;margin-top:1px;"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd"/></svg>
+                    <div style="flex:1;">
+                        @if(is_array(session('success')))
+                            <p style="font-size:.875rem;font-weight:700;color:#15803d;margin:0 0 6px;">{{ session('success')['title'] }}</p>
+                            @foreach(session('success')['lines'] as $line)
+                                <p style="font-size:.8125rem;color:#166534;margin:2px 0;">{{ $line }}</p>
+                            @endforeach
+                        @else
+                            <p style="font-size:.875rem;color:#15803d;margin:0;">{{ session('success') }}</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            @if(session('info'))
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#2563eb" style="width:18px;height:18px;flex-shrink:0;margin-top:1px;"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clip-rule="evenodd"/></svg>
+                    <div style="flex:1;">
+                        @if(is_array(session('info')))
+                            <p style="font-size:.875rem;font-weight:700;color:#1d4ed8;margin:0 0 6px;">{{ session('info')['title'] }}</p>
+                            @foreach(session('info')['lines'] as $line)
+                                <p style="font-size:.8125rem;color:#1e40af;margin:2px 0;">{{ $line }}</p>
+                            @endforeach
+                        @else
+                            <p style="font-size:.875rem;color:#1d4ed8;margin:0;">{{ session('info') }}</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            @if(session('warning'))
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#d97706" style="width:18px;height:18px;flex-shrink:0;margin-top:1px;"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/></svg>
+                    <div style="flex:1;">
+                        @if(is_array(session('warning')))
+                            <p style="font-size:.875rem;font-weight:700;color:#b45309;margin:0 0 6px;">{{ session('warning')['title'] }}</p>
+                            @foreach(session('warning')['lines'] as $line)
+                                <p style="font-size:.8125rem;color:#92400e;margin:2px 0;">{{ $line }}</p>
+                            @endforeach
+                        @else
+                            <p style="font-size:.875rem;color:#b45309;margin:0;">{{ session('warning') }}</p>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#dc2626" style="width:18px;height:18px;flex-shrink:0;margin-top:1px;"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clip-rule="evenodd"/></svg>
+                    <div style="flex:1;">
+                        @if(is_array(session('error')))
+                            <p style="font-size:.875rem;font-weight:700;color:#dc2626;margin:0 0 6px;">{{ session('error')['title'] }}</p>
+                            @foreach(session('error')['lines'] as $line)
+                                <p style="font-size:.8125rem;color:#b91c1c;margin:2px 0;">{{ $line }}</p>
+                            @endforeach
+                        @else
+                            <p style="font-size:.875rem;color:#dc2626;margin:0;">{{ session('error') }}</p>
+                        @endif
+                    </div>
                 </div>
             @endif
 

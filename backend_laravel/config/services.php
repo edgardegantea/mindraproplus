@@ -35,13 +35,25 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Microservicio Python ML (FastAPI) — reemplaza Django
+    |--------------------------------------------------------------------------
+    | MINDRABACK_URL apunta al microservicio FastAPI (antes apuntaba a Django).
+    | En producción: URL interna del VPS, e.g. http://localhost:8001
+    | En desarrollo: http://localhost:8001
+    */
     'mindraback' => [
-        'url' => env('MINDRABACK_URL', 'https://mindraback.cafined.org'),
+        'url'             => env('MINDRABACK_URL', 'http://localhost:8001'),
+        'timeout'         => env('MINDRABACK_TIMEOUT', 60),
+        'connect_timeout' => env('MINDRABACK_CONNECT_TIMEOUT', 8),
     ],
 
     'mercadopago' => [
-        'access_token' => env('MERCADOPAGO_ACCESS_TOKEN'),
-        'public_key'   => env('MERCADOPAGO_PUBLIC_KEY'),
+        'access_token'   => env('MERCADOPAGO_ACCESS_TOKEN'),
+        'public_key'     => env('MERCADOPAGO_PUBLIC_KEY'),
+        // Obtener desde: Panel MP → Configuración → Notificaciones → Secret
+        'webhook_secret' => env('MERCADOPAGO_WEBHOOK_SECRET'),
     ],
 
 ];

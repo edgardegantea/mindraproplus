@@ -295,6 +295,12 @@
             </div>
 
             <button type="submit" class="btn-plus">Enviar solicitud →</button>
+            <p style="text-align:center;margin-top:12px;font-size:.75rem;color:#94a3b8;">
+                Al enviar confirmas que aceptas el
+                <a href="{{ route('contracts.plus') }}" target="_blank" style="color:#7c3aed;">Contrato de Acceso Plus</a>,
+                los <a href="{{ route('legal.terms') }}" target="_blank" style="color:#7c3aed;">Términos de uso</a>
+                y la <a href="{{ route('legal.privacy') }}" target="_blank" style="color:#7c3aed;">Política de privacidad</a>.
+            </p>
         </form>
 
         @endif
@@ -332,6 +338,15 @@
         </div>
         <div style="margin-top:12px;padding:12px;background:#fffbeb;border-radius:12px;font-size:.84rem;color:#92400e;line-height:1.55;">
             ⏱️ Respuesta en menos de <strong>24 horas hábiles</strong>.
+        </div>
+        <div style="margin-top:16px;text-align:center;">
+            <a href="{{ route('contracts.plus') }}" target="_blank"
+               style="font-size:.75rem;color:#7c3aed;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" style="width:13px;height:13px;">
+                    <path fill-rule="evenodd" d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V5.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm1 7.75a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Zm.75-3.25a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Z" clip-rule="evenodd"/>
+                </svg>
+                Ver Contrato de Acceso Plus
+            </a>
         </div>
     </div>
 

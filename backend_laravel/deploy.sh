@@ -46,8 +46,12 @@ if [ ! -f .env ]; then
 else
     echo "[4/8] .env already exists, merging new variables..."
     # Add new env vars if missing
-    grep -q "MERCADOPAGO_ACCESS_TOKEN" .env || echo -e "\nMERCADOPAGO_ACCESS_TOKEN=CHANGE_ME" >> .env
-    grep -q "MERCADOPAGO_PUBLIC_KEY" .env || echo -e "MERCADOPAGO_PUBLIC_KEY=CHANGE_ME" >> .env
+    grep -q "MERCADOPAGO_ACCESS_TOKEN"    .env || echo -e "\nMERCADOPAGO_ACCESS_TOKEN=CHANGE_ME"    >> .env
+    grep -q "MERCADOPAGO_PUBLIC_KEY"      .env || echo -e "MERCADOPAGO_PUBLIC_KEY=CHANGE_ME"        >> .env
+    grep -q "MERCADOPAGO_WEBHOOK_SECRET"  .env || echo -e "MERCADOPAGO_WEBHOOK_SECRET=CHANGE_ME"    >> .env
+    grep -q "MINDRABACK_URL"              .env || echo -e "\nMINDRABACK_URL=http://localhost:8001"   >> .env
+    grep -q "MINDRABACK_TIMEOUT"          .env || echo -e "MINDRABACK_TIMEOUT=60"                   >> .env
+    grep -q "MINDRABACK_CONNECT_TIMEOUT"  .env || echo -e "MINDRABACK_CONNECT_TIMEOUT=8"            >> .env
     grep -q "DB_CONNECTION" .env && sed -i.bak 's/DB_CONNECTION=sqlite/DB_CONNECTION=mysql/' .env && rm -f .env.bak
 fi
 
@@ -77,3 +81,5 @@ php artisan view:cache
 echo ""
 echo "=== Deploy complete ==="
 echo "Visit: https://mindra.cafined.org"
+echo ""
+echo "Health check: curl https://mindra.cafined.org/api/health"

@@ -16,8 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
         $middleware->alias([
-            'admin' => \App\Http\Middleware\EnsureAdmin::class,
+            'admin'      => \App\Http\Middleware\EnsureAdmin::class,
             'superadmin' => \App\Http\Middleware\EnsureSuperAdmin::class,
+            'feature'    => \App\Http\Middleware\RequireFeature::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

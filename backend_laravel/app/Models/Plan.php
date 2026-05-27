@@ -9,33 +9,41 @@ class Plan extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'features' => 'array',
-        'trial_days' => 'integer',
+        'features'     => 'array',
+        'trial_days'   => 'integer',
+        'billing_days' => 'integer',
     ];
 
     public const FREE = 'free';
     public const PRO  = 'pro';
     public const PLUS = 'plus';
 
+    /**
+     * Devuelve el plan Free, usando la caché para evitar un DB hit por request.
+     * TTL de 1 hora: suficiente para producción; se invalida en seeders/migraciones
+     * ejecutando Cache::forget('plan:free').
+     */
     public static function free(): self
     {
-        return self::firstOrCreate(
-            ['slug' => self::FREE],
-            [
-                'name'        => 'Free',
-                'description' => 'Acceso básico con texto y audio.',
-                'price_cents' => 0,
-                'currency'    => 'MXN',
-                'features'    => [
-                    'texto'        => true,
-                    'audio'        => true,
-                    'emociones'    => false,
-                    'historial'    => false,
-                    'imagen'       => false,
-                    'estadisticas' => false,
-                ],
-                'trial_days'  => 0,
-            ]
+        return cache()->remember('plan:free', now()->addHour(), fn () =>
+            self::firstOrCreate(
+                ['slug' => self::FREE],
+                [
+                    'name'        => 'Free',
+                    'description' => 'Acceso básico con texto y audio.',
+                    'price_cents' => 0,
+                    'currency'    => 'MXN',
+                    'features'    => [
+                        'texto'        => true,
+                        'audio'        => true,
+                        'emociones'    => false,
+                        'historial'    => false,
+                        'imagen'       => false,
+                        'estadisticas' => false,
+                    ],
+                    'trial_days'  => 0,
+                ]
+            )
         );
     }
 

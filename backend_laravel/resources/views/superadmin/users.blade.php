@@ -62,6 +62,7 @@
                             <div>
                                 <p style="font-size:.875rem;font-weight:600;color:#1e293b;margin:0;">{{ $user->name }}</p>
                                 <p style="font-size:.75rem;color:#94a3b8;margin:2px 0 0;">{{ $user->email }}</p>
+                                <p style="font-size:.6875rem;color:#cbd5e1;margin:2px 0 0;">Registro: {{ $user->created_at->format('d/m/Y') }}</p>
                             </div>
                         </div>
                     </td>
@@ -111,14 +112,22 @@
                     </td>
                     <td style="padding:14px 16px;text-align:center;font-size:.875rem;font-weight:600;color:#334155;">{{ $user->inference_records_count }}</td>
                     <td style="padding:14px 16px;text-align:center;">
-                        <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
-                            <a href="{{ route('superadmin.users.detail', $user) }}" style="font-size:.6875rem;font-weight:600;color:#4f46e5;padding:5px 10px;border-radius:8px;border:1px solid #c7d2fe;background:#eef2ff;transition:all .15s;"
-                               onmouseover="this.style.background='#4f46e5';this.style.color='#fff'" onmouseout="this.style.background='#eef2ff';this.style.color='#4f46e5'">Detalle</a>
+                        <div style="display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap;">
+                            <a href="{{ route('superadmin.users.detail', $user) }}"
+                               style="font-size:.6875rem;font-weight:600;color:#4f46e5;padding:5px 10px;border-radius:8px;border:1px solid #c7d2fe;background:#eef2ff;">Ver</a>
+                            @if($currentPlan !== 'free')
+                            <form method="POST" action="{{ route('superadmin.users.update', $user) }}" style="display:inline;">
+                                @csrf
+                                <input type="hidden" name="action" value="notify_plan">
+                                <button type="submit" title="Reenviar email de activación de plan"
+                                        style="font-size:.6875rem;font-weight:600;color:#16a34a;padding:5px 10px;border-radius:8px;border:1px solid #bbf7d0;background:#f0fdf4;cursor:pointer;">📧</button>
+                            </form>
+                            @endif
                             <form method="POST" action="{{ route('superadmin.users.update', $user) }}" style="display:inline;">
                                 @csrf
                                 <input type="hidden" name="action" value="toggle_status">
-                                <button type="submit" style="font-size:.6875rem;font-weight:600;color:#dc2626;padding:5px 10px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;cursor:pointer;transition:all .15s;"
-                                        onmouseover="this.style.background='#dc2626';this.style.color='#fff'" onmouseout="this.style.background='#fef2f2';this.style.color='#dc2626'">Desactivar</button>
+                                <button type="submit"
+                                        style="font-size:.6875rem;font-weight:600;color:#dc2626;padding:5px 10px;border-radius:8px;border:1px solid #fecaca;background:#fef2f2;cursor:pointer;">Desact.</button>
                             </form>
                         </div>
                     </td>

@@ -764,9 +764,15 @@ html { font-size: calc(16px * var(--font-scale, 1)); }
     border: none; cursor: pointer; display: flex;
     align-items: center; justify-content: center;
     box-shadow: 0 4px 16px rgba(79,70,229,.35);
-    transition: all .2s;
+    transition: opacity .4s ease, transform .4s ease, box-shadow .2s;
+    opacity: 1;
 }
 .a11y-fab:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(79,70,229,.45); }
+.a11y-fab.a11y-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px);
+}
 
 .a11y-panel {
     position: fixed; bottom: 78px; left: 20px; z-index: 9999;
@@ -1013,6 +1019,49 @@ html { font-size: calc(16px * var(--font-scale, 1)); }
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
         if (localStorage.getItem('mindra_theme') === 'auto') applyStored();
     });
+
+    // ── Auto-hide FAB after 3 s of inactivity ─────────────────────────────
+    (function() {
+        var fab = document.querySelector('.a11y-fab');
+        if (!fab) return;
+
+        var hideTimer = null;
+        var IDLE_MS = 3000; // ms antes de ocultar
+
+        function showFab() {
+            fab.classList.remove('a11y-hidden');
+            resetTimer();
+        }
+
+        function hideFab() {
+            // No ocultar si el panel está abierto
+            var panel = document.getElementById('a11yPanel');
+            if (panel && panel.classList.contains('open')) {
+                resetTimer();
+                return;
+            }
+            fab.classList.add('a11y-hidden');
+        }
+
+        function resetTimer() {
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(hideFab, IDLE_MS);
+        }
+
+        // Eventos que revelan el botón
+        var events = ['mousemove', 'mousedown', 'touchstart', 'scroll', 'keydown'];
+        events.forEach(function(ev) {
+            document.addEventListener(ev, showFab, { passive: true });
+        });
+
+        // El propio botón siempre se muestra al hacer hover
+        fab.addEventListener('mouseenter', showFab);
+        fab.addEventListener('focus', showFab);
+
+        // Arrancar el timer inicial
+        resetTimer();
+    })();
+    // ─────────────────────────────────────────────────────────────────────────
 
     applyStored();
 })();

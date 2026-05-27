@@ -19,9 +19,23 @@ class SubscriptionController extends Controller
     {
         $subscription = $this->subscriptionService->getActiveSubscription($request->user());
 
+        if (!$subscription) {
+            return response()->json(['ok' => true, 'subscription' => null]);
+        }
+
+        $subscription->load('plan');
+
+        // Devuelve el plan con las features efectivas (override si existe)
+        $planData = $subscription->plan?->toArray() ?? [];
+        $planData['features'] = $subscription->effectiveFeatures();
+
         return response()->json([
-            'ok' => true,
-            'subscription' => $subscription,
+            'ok'           => true,
+            'subscription' => array_merge($subscription->toArray(), [
+                'plan'              => $planData,
+                'features_override' => $subscription->features_override,
+                'effective_features'=> $subscription->effectiveFeatures(),
+            ]),
         ]);
     }
 

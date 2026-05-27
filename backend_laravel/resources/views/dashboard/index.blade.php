@@ -54,7 +54,28 @@
     <p class="text-slate-500 text-sm mt-1">Historial de tus conversaciones y análisis de bienestar</p>
 </div>
 
+{{-- ─── Upgrade prompt (plan Free) ─────────────────────────────────────────── --}}
+@if(empty($canHistorial))
+<div style="background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:2px solid #c7d2fe;border-radius:20px;padding:40px;text-align:center;margin-bottom:2rem;">
+    <div style="font-size:2.5rem;margin-bottom:12px;">📊</div>
+    <h2 style="font-size:1.25rem;font-weight:800;color:#3730a3;margin:0 0 8px;">Tu historial está disponible en Plan Pro</h2>
+    <p style="color:#6366f1;font-size:.9375rem;line-height:1.6;max-width:420px;margin:0 auto 24px;">
+        Con el plan Pro accedes a tus últimas 20 sesiones, análisis de bienestar y estadísticas personalizadas.
+        Con Plus, historial ilimitado y reporte clínico.
+    </p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <a href="{{ route('plans.pro') }}" style="padding:12px 24px;border-radius:12px;background:linear-gradient(135deg,#6366f1,#9333ea);color:#fff;font-weight:700;font-size:.9375rem;text-decoration:none;">
+            Ver plan Pro — $149 MXN/mes
+        </a>
+        <a href="{{ route('plans.plus') }}" style="padding:12px 24px;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;font-weight:700;font-size:.9375rem;text-decoration:none;">
+            Ver plan Plus — $199 MXN/mes
+        </a>
+    </div>
+</div>
+@else
+
 {{-- ─── Stats ───────────────────────────────────────────────────────────────── --}}
+@if(!empty($canEstadisticas))
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
     <div class="bg-white rounded-2xl border border-slate-200 p-5">
         <p class="text-xs font-medium text-slate-400 uppercase tracking-wide">Análisis totales</p>
@@ -71,6 +92,17 @@
         <p class="text-3xl font-bold text-rose-500 mt-2">{{ $highAnxietyCount }}</p>
     </div>
 </div>
+@else
+{{-- Pro sin estadísticas avanzadas: banner upgrade a Plus --}}
+<div style="background:linear-gradient(135deg,#faf5ff,#f5f3ff);border:1.5px solid #ddd6fe;border-radius:14px;padding:16px 20px;margin-bottom:1.5rem;display:flex;align-items:center;gap:16px;">
+    <span style="font-size:1.5rem;">📈</span>
+    <div style="flex:1;">
+        <p style="font-size:.875rem;font-weight:700;color:#7c3aed;margin:0 0 2px;">Estadísticas avanzadas disponibles en Plus</p>
+        <p style="font-size:.8125rem;color:#9333ea;margin:0;">Calendario de bienestar, tendencias semanales y reporte clínico en PDF.</p>
+    </div>
+    <a href="{{ route('plans.plus') }}" style="padding:8px 16px;border-radius:9px;background:#7c3aed;color:#fff;font-size:.8125rem;font-weight:700;text-decoration:none;white-space:nowrap;">Ver Plus →</a>
+</div>
+@endif
 
 {{-- ─── Layout: Calendario + Sesiones ─────────────────────────────────────── --}}
 @php
@@ -450,5 +482,7 @@ function dashboard(calData, sessionDates, sessionLevels) {
     };
 }
 </script>
+
+@endif {{-- canHistorial --}}
 
 @endsection

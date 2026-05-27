@@ -139,6 +139,61 @@
     </div>
 </div>
 
+{{-- Solicitudes Plus pendientes --}}
+@if($pendingPlusCount > 0)
+<div style="background:linear-gradient(135deg,#faf5ff,#ede9fe);border:2px solid #a78bfa;border-radius:16px;padding:24px;margin-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#7c3aed,#4f46e5);display:flex;align-items:center;justify-content:center;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#fff" style="width:20px;height:20px;"><path d="M3 4a2 2 0 0 0-2 2v1.161l8.441 4.221a1.25 1.25 0 0 0 1.118 0L19 7.162V6a2 2 0 0 0-2-2H3Z"/><path d="m19 8.839-7.77 3.885a2.75 2.75 0 0 1-2.46 0L1 8.839V14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.839Z"/></svg>
+            </div>
+            <div>
+                <h3 style="font-size:1rem;font-weight:800;color:#4c1d95;margin:0;">Solicitudes Plan Plus</h3>
+                <p style="font-size:.8125rem;color:#7c3aed;margin:0;">Requieren atención</p>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <span style="background:#7c3aed;color:#fff;font-size:.875rem;font-weight:800;padding:4px 14px;border-radius:9999px;">
+                {{ $pendingPlusCount }} pendiente{{ $pendingPlusCount !== 1 ? 's' : '' }}
+            </span>
+            <a href="{{ route('superadmin.pro-orders', ['status' => 'inquiry']) }}"
+               style="font-size:.8125rem;font-weight:700;color:#4f46e5;padding:7px 16px;border-radius:10px;border:1.5px solid #a78bfa;background:#fff;text-decoration:none;">
+                Ver todas →
+            </a>
+        </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;">
+        @foreach($pendingPlusOrders as $order)
+        @php
+            $notes = is_array($order->notes) ? $order->notes : [];
+            $orgName = $notes['org_name'] ?? '—';
+            $isNew = $order->status === 'inquiry';
+        @endphp
+        <div style="background:#fff;border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid #ddd6fe;">
+            <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                <div style="flex-shrink:0;">
+                    <span style="font-size:.6875rem;font-weight:700;padding:3px 10px;border-radius:9999px;
+                        {{ $isNew ? 'background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;' : 'background:#fffbeb;color:#d97706;border:1px solid #fde68a;' }}">
+                        {{ $isNew ? '🔵 Nueva' : '🟡 En revisión' }}
+                    </span>
+                </div>
+                <div style="min-width:0;">
+                    <div style="font-size:.875rem;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $orgName }}</div>
+                    <div style="font-size:.75rem;color:#64748b;">{{ $order->full_name }} · {{ $notes['requester_position'] ?? $order->email }}</div>
+                    <div style="font-size:.6875rem;color:#94a3b8;">{{ $order->created_at->diffForHumans() }}</div>
+                </div>
+            </div>
+            <a href="{{ route('superadmin.pro-orders.show', $order) }}"
+               style="flex-shrink:0;font-size:.8125rem;font-weight:700;color:#7c3aed;padding:7px 16px;border-radius:10px;border:1.5px solid #ddd6fe;background:#f5f3ff;text-decoration:none;white-space:nowrap;">
+                Revisar →
+            </a>
+        </div>
+        @endforeach
+    </div>
+</div>
+@endif
+
 {{-- Últimos usuarios --}}
 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">

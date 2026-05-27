@@ -57,6 +57,26 @@ class User extends Authenticatable
         return $this->hasMany(PlanRequest::class);
     }
 
+    public function moodJournals()
+    {
+        return $this->hasMany(MoodJournal::class);
+    }
+
+    public function assessments()
+    {
+        return $this->hasMany(Assessment::class);
+    }
+
+    public function therapistShares()
+    {
+        return $this->hasMany(TherapistShare::class);
+    }
+
+    public function programEnrollments()
+    {
+        return $this->hasMany(ProgramEnrollment::class);
+    }
+
     // --- Role helpers (multi-role via role_user pivot) ---
 
     public function allRoles(): array
@@ -140,5 +160,65 @@ class User extends Authenticatable
             })
             ->latest('expires_at')
             ->first()?->plan;
+    }
+
+    /**
+     * Devuelve la suscripción activa con su plan cargado.
+     */
+    public function activeSubscription(): ?\App\Models\Subscription
+    {
+        return $this->subscriptions()
+            ->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>=', now());
+            })
+            ->latest('expires_at')
+            ->with('plan')
+            ->first();
+    }
+
+    /**
+     * Features efectivas del usuario según su suscripción activa.
+     * Si no tiene suscripción activa se devuelven las features del plan Free.
+     *
+     * Memoizado con once() — se calcula una sola vez por instancia/request.
+     * Evita múltiples DB hits cuando controllers o middleware lo llaman varias
+     * veces sobre el mismo usuario en la misma request.
+     */
+    public function features(): array
+    {
+        return once(function () {
+            $sub = $this->activeSubscription();
+
+            if ($sub) {
+                return $sub->effectiveFeatures();
+            }
+
+            // Sin suscripción activa → features del plan Free
+            return Plan::free()->features ?? [
+                'texto'        => true,
+                'audio'        => true,
+                'emociones'    => false,
+                'historial'    => false,
+                'imagen'       => false,
+                'estadisticas' => false,
+            ];
+        });
+    }
+
+    /**
+     * Datos seguros para exponer en respuestas API.
+     * No incluye role, institution_id ni otros campos internos.
+     */
+    public function toApiArray(): array
+    {
+        return [
+            'id'                => $this->id,
+            'name'              => $this->name,
+            'email'             => $this->email,
+            'email_verified_at' => $this->email_verified_at?->toIso8601String(),
+            'created_at'        => $this->created_at->toIso8601String(),
+        ];
     }
 }

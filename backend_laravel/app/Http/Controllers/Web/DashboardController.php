@@ -11,30 +11,57 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $request->user();
+        $user     = $request->user();
+        $features = $user->features();
 
-        // Datos diarios para el calendario (todos los tiempos)
-        $calendarData = InferenceRecord::where('user_id', $user->id)
-            ->selectRaw('DATE(created_at) as day, AVG(predicted_probability) as avg_prob, COUNT(*) as cnt')
-            ->groupByRaw('DATE(created_at)')
-            ->get()
-            ->mapWithKeys(fn ($r) => [
-                $r->day => ['avg' => round((float) $r->avg_prob * 100), 'cnt' => (int) $r->cnt],
+        $canHistorial    = !empty($features['historial']);
+        $canEstadisticas = !empty($features['estadisticas']);
+        $isPlus          = !empty($features['imagen']); // proxy de plan Plus
+
+        // Sin historial → solo mostrar prompt de upgrade
+        if (!$canHistorial) {
+            return view('dashboard.index', [
+                'sessions'        => null,
+                'totalInferences' => null,
+                'avgProbability'  => null,
+                'highAnxietyCount'=> null,
+                'calendarData'    => collect(),
+                'features'        => $features,
+                'canHistorial'    => false,
+                'canEstadisticas' => false,
             ]);
+        }
 
-        // Sesiones con promedio y registros en orden cronológico
+        // Calendario: solo si tiene estadísticas
+        $calendarData = collect();
+        if ($canEstadisticas) {
+            $calendarData = InferenceRecord::where('user_id', $user->id)
+                ->selectRaw('DATE(created_at) as day, AVG(predicted_probability) as avg_prob, COUNT(*) as cnt')
+                ->groupByRaw('DATE(created_at)')
+                ->get()
+                ->mapWithKeys(fn ($r) => [
+                    $r->day => ['avg' => round((float) $r->avg_prob * 100), 'cnt' => (int) $r->cnt],
+                ]);
+        }
+
+        // Sesiones: Pro → últimas 10 | Plus → últimas 30
+        $sessionLimit = $isPlus ? 30 : 10;
         $sessions = VisitorSession::where('user_id', $user->id)
             ->withCount('inferenceRecords')
             ->withAvg('inferenceRecords', 'predicted_probability')
             ->with(['inferenceRecords' => fn ($q) => $q->orderBy('created_at', 'asc')])
             ->latest()
-            ->paginate(10);
+            ->paginate($sessionLimit);
 
-        $totalInferences  = InferenceRecord::where('user_id', $user->id)->count();
-        $avgProbability   = InferenceRecord::where('user_id', $user->id)->avg('predicted_probability');
-        $highAnxietyCount = InferenceRecord::where('user_id', $user->id)
-            ->where('predicted_probability', '>', 0.65)
-            ->count();
+        $totalInferences  = $canEstadisticas
+            ? InferenceRecord::where('user_id', $user->id)->count()
+            : null;
+        $avgProbability   = $canEstadisticas
+            ? InferenceRecord::where('user_id', $user->id)->avg('predicted_probability')
+            : null;
+        $highAnxietyCount = $canEstadisticas
+            ? InferenceRecord::where('user_id', $user->id)->where('predicted_probability', '>', 0.65)->count()
+            : null;
 
         return view('dashboard.index', compact(
             'sessions',
@@ -42,7 +69,8 @@ class DashboardController extends Controller
             'avgProbability',
             'highAnxietyCount',
             'calendarData',
-        ));
+            'features',
+        ) + ['canHistorial' => true, 'canEstadisticas' => $canEstadisticas]);
     }
 
     public static function recommendations(float $pct): array

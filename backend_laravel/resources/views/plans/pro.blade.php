@@ -197,7 +197,7 @@
                 <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
                     <input type="checkbox" name="accept_terms" value="1" {{ old('accept_terms') ? 'checked' : '' }} required style="margin-top:3px;width:16px;height:16px;accent-color:#4f46e5;">
                     <span style="font-size:.8125rem;color:#475569;line-height:1.5;">
-                        Acepto los <a href="{{ route('legal.terms') }}" target="_blank" style="color:#4f46e5;font-weight:600;">Términos y condiciones</a> y la <a href="{{ route('legal.privacy') }}" target="_blank" style="color:#4f46e5;font-weight:600;">Política de privacidad</a> de Mindra Pro.
+                        Acepto los <a href="{{ route('legal.terms') }}" target="_blank" style="color:#4f46e5;font-weight:600;">Términos y condiciones</a>, la <a href="{{ route('legal.privacy') }}" target="_blank" style="color:#4f46e5;font-weight:600;">Política de privacidad</a> y el <a href="{{ route('contracts.pro') }}" target="_blank" style="color:#4f46e5;font-weight:600;">Contrato de suscripción Pro</a>.
                     </span>
                 </label>
                 @error('accept_terms') <p class="form-error">{{ $message }}</p> @enderror
@@ -248,7 +248,7 @@
 
         <div style="margin-bottom:20px;">
             <p style="font-size:.6875rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Incluye</p>
-            @foreach(['Chat con IA (texto y audio)', 'Análisis por voz avanzado', 'Historial completo ilimitado', 'Recomendaciones personalizadas', 'Soporte prioritario'] as $feature)
+            @foreach(['Chat con IA (texto y voz)', 'Análisis de emociones detallado', 'Historial de sesiones (últimas 20)', 'Calendario de bienestar', 'Recomendaciones personalizadas'] as $feature)
             <div class="summary-feature">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#4f46e5"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>
                 {{ $feature }}
@@ -279,6 +279,16 @@
             <p style="font-size:.75rem;color:#64748b;line-height:1.6;text-align:center;">
                 Puedes cancelar en cualquier momento desde tu panel de usuario.
             </p>
+        </div>
+
+        <div style="margin-top:12px;text-align:center;">
+            <a href="{{ route('contracts.pro') }}" target="_blank"
+               style="font-size:.75rem;color:#6366f1;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" style="width:13px;height:13px;">
+                    <path fill-rule="evenodd" d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V5.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm1 7.75a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Zm.75-3.25a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Z" clip-rule="evenodd"/>
+                </svg>
+                Ver contrato de suscripción Pro
+            </a>
         </div>
     </div>
 </div>

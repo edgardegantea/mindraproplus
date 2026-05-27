@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Plan;
 use App\Models\ProOrder;
-use App\Models\Subscription;
-use Carbon\Carbon;
+use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use MercadoPago\Client\Payment\PaymentClient;
@@ -13,8 +11,35 @@ use MercadoPago\MercadoPagoConfig;
 
 class MercadoPagoWebhookController extends Controller
 {
+    public function __construct(protected SubscriptionService $subscriptionService) {}
+
     public function handle(Request $request)
     {
+        // ── Verificación de firma HMAC-SHA256 ────────────────────────────────
+        // MercadoPago envía x-signature y x-request-id en cada webhook.
+        // Si MERCADOPAGO_WEBHOOK_SECRET está configurado en .env, verificamos.
+        // Sin el secret configurado se registra una advertencia pero se continúa
+        // (modo permisivo para facilitar el onboarding inicial).
+        //
+        // Para activar la verificación:
+        //   1. En el panel MP: Configuración → Notificaciones → copia el "secret"
+        //   2. Añade a .env: MERCADOPAGO_WEBHOOK_SECRET=tu_secret
+        $webhookSecret = config('services.mercadopago.webhook_secret');
+
+        if ($webhookSecret) {
+            if (!$this->verifySignature($request, $webhookSecret)) {
+                Log::warning('MercadoPago webhook: firma inválida', [
+                    'ip'         => $request->ip(),
+                    'signature'  => $request->header('x-signature'),
+                    'request_id' => $request->header('x-request-id'),
+                ]);
+                return response()->json(['ok' => false, 'error' => 'Firma inválida'], 401);
+            }
+        } else {
+            Log::debug('MercadoPago webhook: MERCADOPAGO_WEBHOOK_SECRET no configurado; omitiendo verificación de firma');
+        }
+
+        // ── Tipo de evento ───────────────────────────────────────────────────
         $type = $request->input('type') ?? $request->input('topic');
 
         if ($type !== 'payment') {
@@ -29,15 +54,18 @@ class MercadoPagoWebhookController extends Controller
         MercadoPagoConfig::setAccessToken(config('services.mercadopago.access_token'));
 
         try {
-            $client = new PaymentClient();
+            $client  = new PaymentClient();
             $payment = $client->get($paymentId);
         } catch (\Exception $e) {
-            Log::error('MercadoPago webhook: no se pudo obtener pago', ['id' => $paymentId, 'error' => $e->getMessage()]);
+            Log::error('MercadoPago webhook: no se pudo obtener pago', [
+                'id'    => $paymentId,
+                'error' => $e->getMessage(),
+            ]);
             return response()->json(['ok' => false], 500);
         }
 
         $orderId = $payment->external_reference;
-        $order = ProOrder::find($orderId);
+        $order   = ProOrder::find($orderId);
 
         if (!$order) {
             Log::warning('MercadoPago webhook: orden no encontrada', ['ref' => $orderId]);
@@ -55,47 +83,40 @@ class MercadoPagoWebhookController extends Controller
                 'status'  => 'paid',
                 'paid_at' => now(),
             ]);
-            $this->activateProSubscription($order);
+
+            // Delegamos al servicio — único lugar que activa suscripciones MP.
+            $this->subscriptionService->activateFromOrder($order->fresh());
         }
 
         return response()->json(['ok' => true]);
     }
 
-    private function activateProSubscription(ProOrder $order): void
+    // ── HMAC-SHA256 ───────────────────────────────────────────────────────────
+    // Formato de x-signature: "ts=1704908010,v1=618c853..."
+    // Mensaje firmado:        "id:{data_id};request-id:{x-request-id};ts:{ts};"
+    private function verifySignature(Request $request, string $secret): bool
     {
-        if (!$order->user_id) {
-            return;
+        $signatureHeader = $request->header('x-signature', '');
+        $requestId       = $request->header('x-request-id', '');
+
+        // Extraer ts y v1 del header
+        $parts = [];
+        foreach (explode(',', $signatureHeader) as $part) {
+            [$k, $v] = array_pad(explode('=', $part, 2), 2, '');
+            $parts[trim($k)] = trim($v);
         }
 
-        $plan = Plan::where('slug', 'pro')->first();
-        if (!$plan) {
-            return;
+        $ts       = $parts['ts']  ?? '';
+        $received = $parts['v1']  ?? '';
+
+        if (!$ts || !$received) {
+            return false;
         }
 
-        $existing = Subscription::where('user_id', $order->user_id)
-            ->where('plan_id', $plan->id)
-            ->where('status', 'active')
-            ->where('external_subscription_id', $order->mp_payment_id)
-            ->exists();
+        $dataId  = $request->input('data.id') ?? $request->input('id', '');
+        $message = "id:{$dataId};request-id:{$requestId};ts:{$ts};";
+        $expected = hash_hmac('sha256', $message, $secret);
 
-        if ($existing) {
-            return;
-        }
-
-        Subscription::where('user_id', $order->user_id)
-            ->where('status', 'active')
-            ->update(['status' => 'cancelled']);
-
-        $days = $order->billing_period === 'annual' ? 365 : 30;
-
-        Subscription::create([
-            'user_id'    => $order->user_id,
-            'plan_id'    => $plan->id,
-            'status'     => 'active',
-            'provider'   => 'mercadopago',
-            'external_subscription_id' => $order->mp_payment_id,
-            'started_at' => Carbon::now(),
-            'expires_at' => Carbon::now()->addDays($days),
-        ]);
+        return hash_equals($expected, $received);
     }
 }

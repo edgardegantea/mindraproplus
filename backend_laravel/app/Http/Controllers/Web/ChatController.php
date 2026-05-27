@@ -12,37 +12,49 @@ class ChatController extends Controller
 
     public function index()
     {
-        return view('chat.index');
+        $features = auth()->user()->features();
+        return view('chat.index', compact('features'));
     }
 
     public function send(InferenceRequest $request)
     {
-        $result = $this->inferenceService->predict(
-            user: $request->user(),
-            audio: $request->file('audio'),
-            text: $request->input('texto', ''),
-            image: $request->file('image'),
-            durationSeconds: $request->input('duration_seconds')
-                ? (float) $request->input('duration_seconds')
-                : null,
-            facialEmotion: $request->input('facial_emotion'),
-            facialConfidence: $request->input('facial_confidence')
-                ? (float) $request->input('facial_confidence')
-                : null,
-        );
+        $user     = $request->user();
+        $features = $user->features();
+
+        $canEmociones = $features['emociones'] ?? false;
+        $canImagen    = $features['imagen']    ?? false;
+
+        try {
+            $result = $this->inferenceService->predict(
+                user:            $user,
+                audio:           $request->file('audio'),
+                text:            $request->input('texto', ''),
+                image:           $canImagen ? $request->file('image') : null,
+                durationSeconds: $request->input('duration_seconds')
+                    ? (float) $request->input('duration_seconds')
+                    : null,
+                facialEmotion:   $canImagen ? $request->input('facial_emotion')    : null,
+                facialConfidence: ($canImagen && $request->input('facial_confidence'))
+                    ? (float) $request->input('facial_confidence')
+                    : null,
+            );
+        } catch (\Exception $e) {
+            $result = ['ok' => false];
+        }
 
         if (!$result['ok']) {
-            return response()->json(['ok' => false, 'error' => $result['error']], 400);
+            $result = $this->inferenceService->publicFallback($request->input('texto', ''));
         }
 
         return response()->json([
-            'ok'                   => true,
-            'texto'                => $result['texto'],
-            'etiqueta'             => $result['etiqueta'],
-            'probabilidad_ansiedad'=> $result['probabilidad_ansiedad'],
-            'bot_response'         => $result['bot_response'],
-            'emotion_label'        => $result['emotion_label'] ?? null,
-            'emotion_probability'  => $result['emotion_probability'] ?? null,
+            'ok'                    => true,
+            'texto'                 => $result['texto'],
+            // Solo devolver datos de ansiedad/emoción si el plan lo permite
+            'etiqueta'              => $canEmociones ? ($result['etiqueta']             ?? null) : null,
+            'probabilidad_ansiedad' => $canEmociones ? ($result['probabilidad_ansiedad'] ?? null) : null,
+            'bot_response'          => $result['bot_response'],
+            'emotion_label'         => ($canEmociones && $canImagen) ? ($result['emotion_label']        ?? null) : null,
+            'emotion_probability'   => ($canEmociones && $canImagen) ? ($result['emotion_probability']  ?? null) : null,
         ]);
     }
 }

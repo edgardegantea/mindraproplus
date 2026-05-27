@@ -4,8 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Plan;
 use App\Models\ProOrder;
-use App\Models\Subscription;
-use Carbon\Carbon;
+use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use MercadoPago\Client\Preference\PreferenceClient;
@@ -24,8 +23,9 @@ use MercadoPago\MercadoPagoConfig;
  *   2. Devuelve { ok, checkout_url, order_id }
  *   3. App abre checkout_url en el navegador del sistema
  *   4. MP redirige a /app-callback (página web que indica "regresa a la app")
- *   5. Webhook /api/webhooks/mercadopago activa la suscripción
+ *   5. Webhook /api/webhooks/mercadopago activa la suscripción (fuente principal)
  *   6. App llama GET /api/checkout/orders/{id} para verificar el estado
+ *      (fallback si el webhook tardó o falló)
  */
 class MobileCheckoutController extends Controller
 {
@@ -40,6 +40,8 @@ class MobileCheckoutController extends Controller
         Plan::PRO  => ['monthly' => 'Mindra Pro — Mensual',  'annual' => 'Mindra Pro — Anual'],
         Plan::PLUS => ['monthly' => 'Mindra Plus — Mensual', 'annual' => 'Mindra Plus — Anual'],
     ];
+
+    public function __construct(protected SubscriptionService $subscriptionService) {}
 
     // ── Ruta principal ────────────────────────────────────────────────────────
 
@@ -62,8 +64,8 @@ class MobileCheckoutController extends Controller
             'phone'          => 'nullable|string|max:50',
         ]);
 
-        $user     = $request->user();
-        $period   = $validated['billing_period'];
+        $user   = $request->user();
+        $period = $validated['billing_period'];
 
         $amountCents = self::PRICES[$planSlug][$period];
         $amount      = $amountCents / 100;
@@ -150,20 +152,12 @@ class MobileCheckoutController extends Controller
         ]);
     }
 
-    // ── Alias retrocompatibilidad (ruta anterior /checkout/pro) ──────────────
-
-    /** @deprecated Usa POST /api/checkout/{plan_slug} */
-    public function createProCheckout(Request $request)
-    {
-        return $this->createCheckout($request, Plan::PRO);
-    }
-
     // ── Verificación de orden ─────────────────────────────────────────────────
 
     /**
      * GET /api/checkout/orders/{order}
      *
-     * Si la orden está pagada y la suscripción no existe todavía, la activa
+     * Si la orden está pagada y la suscripción todavía no existe, la activa
      * como fallback (por si el webhook tardó o falló).
      */
     public function checkOrder(Request $request, int $orderId)
@@ -172,34 +166,9 @@ class MobileCheckoutController extends Controller
             ->where('user_id', $request->user()->id)
             ->firstOrFail();
 
+        // Fallback: activar si ya está pagada pero la suscripción aún no existe
         if ($order->status === 'paid') {
-            $planSlug = $order->plan_slug ?? Plan::PRO;
-            $plan     = Plan::where('slug', $planSlug)->first();
-
-            if ($plan) {
-                $activeSub = Subscription::where('user_id', $order->user_id)
-                    ->where('plan_id', $plan->id)
-                    ->where('status', 'active')
-                    ->exists();
-
-                if (!$activeSub) {
-                    Subscription::where('user_id', $order->user_id)
-                        ->where('status', 'active')
-                        ->update(['status' => 'cancelled']);
-
-                    $days = $order->billing_period === 'annual' ? 365 : 30;
-
-                    Subscription::create([
-                        'user_id'                  => $order->user_id,
-                        'plan_id'                  => $plan->id,
-                        'status'                   => 'active',
-                        'provider'                 => 'mercadopago',
-                        'external_subscription_id' => $order->mp_payment_id,
-                        'started_at'               => Carbon::now(),
-                        'expires_at'               => Carbon::now()->addDays($days),
-                    ]);
-                }
-            }
+            $this->subscriptionService->activateFromOrder($order);
         }
 
         return response()->json([

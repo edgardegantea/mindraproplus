@@ -46,6 +46,7 @@
             @endphp
             <tr style="border-bottom:1px solid #f8fafc;" onmouseover="this.style.background='#fafbff'" onmouseout="this.style.background='transparent'">
                 <td style="padding:12px 16px;">
+                    <a href="{{ route('superadmin.subscriptions.show', $sub) }}" style="font-size:.6875rem;color:#94a3b8;display:block;margin-bottom:2px;">#{{ $sub->id }}</a>
                     @if($sub->user)
                         <a href="{{ route('superadmin.users.detail', $sub->user) }}" style="font-size:.8125rem;font-weight:600;color:#4f46e5;">{{ $sub->user->name }}</a>
                         <p style="font-size:.6875rem;color:#94a3b8;margin:2px 0 0;">{{ $sub->user->email }}</p>

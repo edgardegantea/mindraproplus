@@ -60,10 +60,11 @@
         }
         .topbar-left { display:flex; align-items:center; gap:12px; }
         .topbar-avatar {
-            width:36px; height:36px; border-radius:9999px; overflow:hidden;
-            border:2px solid #c7d2fe; box-shadow:0 2px 10px rgba(99,102,241,.15); flex-shrink:0;
+            width:40px; height:40px; border-radius:14px; overflow:hidden;
+            border:1.5px solid #e2e8f0; box-shadow:0 2px 8px rgba(99,102,241,.1); flex-shrink:0;
+            background:#fff; display:flex; align-items:center; justify-content:center;
         }
-        .topbar-avatar img { width:100%; height:100%; object-fit:cover; }
+        .topbar-avatar img { width:32px; height:32px; object-fit:contain; }
 
         /* ── Chat feed ───────────────────────────── */
         .chat-feed {
@@ -82,11 +83,13 @@
             border:1px solid #e8edf5; box-shadow:0 4px 24px rgba(0,0,0,.04);
         }
         .welcome-avatar {
-            width:72px; height:72px; border-radius:9999px; overflow:hidden;
-            border:3px solid #c7d2fe; box-shadow:0 4px 20px rgba(99,102,241,.2);
-            margin:0 auto 16px; position:relative;
+            width:80px; height:80px; border-radius:22px;
+            background:linear-gradient(135deg,#eef2ff,#f5f3ff);
+            border:2px solid #c7d2fe; box-shadow:0 4px 20px rgba(99,102,241,.18);
+            margin:0 auto 16px;
+            display:flex; align-items:center; justify-content:center;
         }
-        .welcome-avatar img { width:100%; height:100%; object-fit:cover; }
+        .welcome-avatar img { width:52px; height:52px; object-fit:contain; }
         .welcome-badges { display:flex; justify-content:center; gap:6px; margin-top:14px; }
         .welcome-badge {
             font-size:.6875rem; padding:4px 12px; border-radius:9999px; font-weight:600;
@@ -105,11 +108,11 @@
         .msg-row.is-mindra { justify-content:flex-start; }
 
         .msg-avatar {
-            width:32px; height:32px; border-radius:9999px; overflow:hidden;
-            border:1.5px solid #c7d2fe; flex-shrink:0; margin-top:2px;
-            box-shadow:0 2px 8px rgba(99,102,241,.12);
+            width:34px; height:34px; border-radius:10px; flex-shrink:0; margin-top:2px;
+            border:1.5px solid #e2e8f0; box-shadow:0 2px 8px rgba(99,102,241,.1);
+            background:#fff; display:flex; align-items:center; justify-content:center;
         }
-        .msg-avatar img { width:100%; height:100%; object-fit:cover; }
+        .msg-avatar img { width:24px; height:24px; object-fit:contain; }
 
         .msg-content { max-width:65%; display:flex; flex-direction:column; gap:6px; }
 
@@ -284,6 +287,30 @@
             cursor:pointer; transition:all .15s; font-family:inherit;
         }
 
+        /* Anxiety toggle pill */
+        .anxiety-toggle {
+            display:flex; align-items:center; gap:8px;
+            padding:7px 14px; border-radius:9999px; cursor:pointer;
+            transition:all .2s; font-family:inherit; border:none; outline:none;
+        }
+        .anxiety-toggle-label {
+            font-size:.75rem; font-weight:700; letter-spacing:.01em;
+        }
+        .anxiety-switch {
+            width:30px; height:17px; border-radius:9999px; position:relative;
+            flex-shrink:0; transition:background .2s;
+        }
+        .anxiety-switch::after {
+            content:''; position:absolute; top:2px; left:2px;
+            width:13px; height:13px; border-radius:9999px; background:#fff;
+            transition:transform .2s cubic-bezier(.34,1.56,.64,1);
+            box-shadow:0 1px 3px rgba(0,0,0,.2);
+        }
+        .anxiety-toggle.on .anxiety-switch { background:linear-gradient(135deg,#6366f1,#9333ea); }
+        .anxiety-toggle.on .anxiety-switch::after { transform:translateX(13px); }
+        .anxiety-toggle.off .anxiety-switch { background:#e2e8f0; }
+        .anxiety-toggle.off .anxiety-switch::after { transform:translateX(0); }
+
         /* ── Error banner ────────────────────────── */
         .error-banner {
             margin:0 28px 8px; padding:10px 16px; background:#fff1f2; border:1px solid #fecdd3;
@@ -304,9 +331,15 @@
 </head>
 <body>
 
+{{-- Features del plan disponibles en JS para Alpine --}}
+<script>
+    const PLAN_FEATURES = {!! json_encode($features ?? ['texto'=>true,'audio'=>true,'emociones'=>false,'historial'=>false,'imagen'=>false,'estadisticas'=>false]) !!};
+</script>
+
 <div x-data="chat()" style="display:contents;">
 
-{{-- ── Camera consent modal ──────────────────────────────────────────────── --}}
+{{-- ── Camera consent modal (solo plan Plus) ──────────────────────────────── --}}
+@if(!empty($features['imagen']))
 <div class="cam-overlay" x-show="showCamConsent" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-1" x-transition:leave-end="opacity-0" x-cloak>
     <div class="cam-modal">
         <div class="cam-modal-icon">
@@ -333,7 +366,10 @@
     </div>
 </div>
 
-{{-- ── Camera floating preview ───────────────────────────────────────────── --}}
+@endif
+
+{{-- ── Camera floating preview (solo plan Plus) ──────────────────────────── --}}
+@if(!empty($features['imagen']))
 <div class="cam-preview" x-show="cameraActive" x-transition x-cloak>
     <video x-ref="camVideo" autoplay playsinline muted></video>
     <canvas x-ref="camCanvas" style="display:none;"></canvas>
@@ -347,12 +383,19 @@
     </div>
 </div>
 
+@endif
+
 {{-- ── Sidebar ─────────────────────────────────────────────────────────────── --}}
 <aside class="chat-sidebar">
     <div class="sidebar-header">
-        <a href="{{ route('home') }}" style="display:flex;align-items:center;gap:8px;">
-            <img src="/assets/img/mindra1.png" alt="" style="height:32px;width:auto;">
-            <img src="/assets/img/mindra2.png" alt="Mindra" style="height:60px;width:auto;">
+        <a href="{{ route('home') }}" style="display:flex;align-items:center;gap:10px;">
+            <div style="width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1.5px solid #c7d2fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <img src="/assets/img/mindra1.png" alt="Mindra" style="width:24px;height:24px;object-fit:contain;">
+            </div>
+            <div>
+                <p style="font-size:.9375rem;font-weight:800;color:#0f172a;margin:0;letter-spacing:-.01em;">mindra</p>
+                <p style="font-size:.625rem;color:#94a3b8;margin:0;font-weight:600;letter-spacing:.04em;">BIENESTAR EMOCIONAL</p>
+            </div>
         </a>
     </div>
 
@@ -378,6 +421,33 @@
                 Inicio
             </a>
         </nav>
+
+        {{-- Upgrade nudge para plan Free --}}
+        @php
+            $planSlug = auth()->user()->activePlan()?->slug ?? 'free';
+        @endphp
+        @if($planSlug === 'free')
+        <div style="margin-top:20px;padding:14px;border-radius:14px;background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1.5px solid #c7d2fe;">
+            <p style="font-size:.75rem;font-weight:800;color:#4338ca;margin:0 0 4px;">Plan Free activo</p>
+            <p style="font-size:.6875rem;color:#6366f1;line-height:1.5;margin:0 0 10px;">Activa <strong>Pro</strong> para ver el análisis de ansiedad y tu historial de sesiones.</p>
+            <a href="{{ route('plans.pro') }}" style="display:block;text-align:center;padding:7px 12px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#9333ea);color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;">
+                Ver plan Pro →
+            </a>
+        </div>
+        @elseif($planSlug === 'pro')
+        <div style="margin-top:20px;padding:14px;border-radius:14px;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1.5px solid #bbf7d0;">
+            <p style="font-size:.75rem;font-weight:800;color:#15803d;margin:0 0 4px;">✓ Plan Pro activo</p>
+            <p style="font-size:.6875rem;color:#16a34a;line-height:1.5;margin:0 0 10px;">Activa <strong>Plus</strong> para análisis facial y estadísticas avanzadas.</p>
+            <a href="{{ route('plans.plus') }}" style="display:block;text-align:center;padding:7px 12px;border-radius:9px;background:linear-gradient(135deg,#059669,#047857);color:#fff;font-size:.75rem;font-weight:700;text-decoration:none;">
+                Ver plan Plus →
+            </a>
+        </div>
+        @else
+        <div style="margin-top:20px;padding:14px;border-radius:14px;background:linear-gradient(135deg,#fdf4ff,#fae8ff);border:1.5px solid #e9d5ff;">
+            <p style="font-size:.75rem;font-weight:800;color:#7e22ce;margin:0;">✦ Plan Plus activo</p>
+            <p style="font-size:.6875rem;color:#9333ea;line-height:1.5;margin:4px 0 0;">Tienes acceso a todas las funciones.</p>
+        </div>
+        @endif
     </div>
 
     <div class="sidebar-footer">
@@ -410,14 +480,16 @@
                 <img src="/assets/img/mindra1.png" alt="Mindra">
             </div>
             <div>
-                <p style="font-size:.875rem;font-weight:700;color:#1e293b;line-height:1.2;">Mindra</p>
-                <p style="font-size:.6875rem;color:#22c55e;font-weight:600;display:flex;align-items:center;gap:4px;">
-                    <span style="width:6px;height:6px;background:#22c55e;border-radius:9999px;display:inline-block;"></span>
-                    En línea
+                <p style="font-size:.9375rem;font-weight:800;color:#0f172a;line-height:1.2;letter-spacing:-.01em;">Mindra</p>
+                <p style="font-size:.6875rem;color:#22c55e;font-weight:600;display:flex;align-items:center;gap:4px;margin-top:1px;">
+                    <span style="width:6px;height:6px;background:#22c55e;border-radius:9999px;display:inline-block;box-shadow:0 0 0 2px rgba(34,197,94,.2);"></span>
+                    Asistente activo
                 </p>
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
+            {{-- Botón cámara: solo plan Plus --}}
+            @if(!empty($features['imagen']))
             <button type="button" @click="toggleCameraUI()"
                     class="cam-toggle-btn"
                     :style="cameraActive
@@ -428,16 +500,41 @@
                 </svg>
                 <span x-text="cameraActive ? 'Cámara activa' : 'Cámara'"></span>
             </button>
-            <button type="button" @click="showAnxiety = !showAnxiety"
-                    style="display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:9999px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;"
-                    :style="showAnxiety
-                        ? 'border:1.5px solid #c7d2fe;background:#eef2ff;color:#4338ca;'
-                        : 'border:1.5px solid #e2e8f0;background:#f8fafc;color:#94a3b8;'">
+            @else
+            <a href="{{ route('plans.plus') }}"
+               title="Disponible en plan Plus"
+               style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:9999px;border:1.5px dashed #e2e8f0;background:#fafafa;color:#cbd5e1;font-size:.75rem;font-weight:600;text-decoration:none;cursor:default;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                </svg>
+                Cámara <span style="font-size:.625rem;padding:1px 6px;border-radius:5px;background:#f5f3ff;color:#9333ea;font-weight:700;margin-left:2px;">Plus</span>
+            </a>
+            @endif
+
+            {{-- Toggle ansiedad: solo plan Pro o Plus --}}
+            @if(!empty($features['emociones']))
+            <button type="button" @click="showAnxiety = !showAnxiety"
+                    class="anxiety-toggle"
+                    :class="showAnxiety ? 'on' : 'off'"
+                    :style="showAnxiety
+                        ? 'border:1.5px solid #c7d2fe;background:linear-gradient(135deg,#eef2ff,#f5f3ff);color:#4338ca;'
+                        : 'border:1.5px solid #e2e8f0;background:#f8fafc;color:#94a3b8;'">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" style="width:14px;height:14px;flex-shrink:0;">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
                 </svg>
-                Ansiedad
+                <span class="anxiety-toggle-label">Ansiedad</span>
+                <div class="anxiety-switch"></div>
             </button>
+            @else
+            <a href="{{ route('plans.pro') }}"
+               title="Disponible en plan Pro"
+               style="display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:9999px;border:1.5px dashed #e2e8f0;background:#fafafa;color:#cbd5e1;font-size:.75rem;font-weight:600;text-decoration:none;">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;flex-shrink:0;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                </svg>
+                Ansiedad <span style="font-size:.625rem;padding:1px 6px;border-radius:5px;background:#eef2ff;color:#6366f1;font-weight:700;margin-left:2px;">Pro</span>
+            </a>
+            @endif
         </div>
     </header>
 
@@ -449,9 +546,9 @@
             <div class="welcome-avatar">
                 <img src="/assets/img/mindra1.png" alt="Mindra">
             </div>
-            <h2 style="font-size:1.25rem;font-weight:800;color:#0f172a;margin-bottom:4px;">Hola, soy Mindra</h2>
+            <h2 style="font-size:1.375rem;font-weight:800;color:#0f172a;margin-bottom:4px;letter-spacing:-.02em;">Hola, soy Mindra</h2>
             <p style="font-size:.875rem;color:#64748b;line-height:1.7;">
-                Tu compañera de bienestar emocional. Escríbeme o envíame un audio sobre cómo te sientes.
+                Tu compañera de bienestar emocional.<br>Escríbeme o envíame un audio sobre cómo te sientes.
             </p>
             <div class="welcome-badges">
                 <span class="welcome-badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;">Confidencial</span>
@@ -636,7 +733,7 @@ function chat() {
         audioMime: '',
         mediaRecorder: null,
         audioChunks: [],
-        showAnxiety: true,
+        showAnxiety: PLAN_FEATURES.emociones === true,
 
         showCamConsent: false,
         cameraActive: false,
@@ -659,7 +756,8 @@ function chat() {
                 emotionCongruent: null,
             });
 
-            if (!localStorage.getItem('mindra_cam_consent_shown')) {
+            // Solo mostrar popup de cámara si el plan tiene la feature 'imagen'
+            if (PLAN_FEATURES.imagen && !localStorage.getItem('mindra_cam_consent_shown')) {
                 setTimeout(() => { this.showCamConsent = true; }, 1500);
             }
         },

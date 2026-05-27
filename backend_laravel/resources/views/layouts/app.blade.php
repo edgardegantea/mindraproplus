@@ -41,6 +41,10 @@
                 @endauth
                 <span class="text-slate-300">|</span>
                 @auth
+                    <a href="{{ route('mi-plan') }}"
+                       class="font-medium {{ request()->routeIs('mi-plan') ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800' }} transition-colors">
+                        Mi plan
+                    </a>
                     <span class="text-slate-400">{{ auth()->user()->name }}</span>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

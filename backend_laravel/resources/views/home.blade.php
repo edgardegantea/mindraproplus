@@ -360,7 +360,7 @@
                     <span style="font-size:.875rem;color:#94a3b8;font-weight:500;"> MXN / siempre</span>
                 </div>
                 <ul style="list-style:none;padding:0;margin:0 0 28px;display:flex;flex-direction:column;gap:10px;">
-                    @foreach(['Chat con IA (texto)', 'Detección de ansiedad básica', 'App móvil + versión web'] as $feat)
+                    @foreach(['Chat con IA (texto y voz)', 'Detección básica de ansiedad', 'App móvil + versión web'] as $feat)
                     <li style="display:flex;align-items:center;gap:8px;font-size:.8125rem;color:#475569;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#16a34a" style="width:16px;height:16px;flex-shrink:0;"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>
                         {{ $feat }}
@@ -394,13 +394,13 @@
                     </div>
                 </div>
                 <h3 style="font-size:1.375rem;font-weight:800;color:#0f172a;margin-bottom:4px;">Pro</h3>
-                <p style="font-size:.8125rem;color:#64748b;margin-bottom:20px;line-height:1.6;">Todo lo básico más análisis avanzados y audio.</p>
+                <p style="font-size:.8125rem;color:#64748b;margin-bottom:20px;line-height:1.6;">Análisis de emociones, historial y funciones avanzadas.</p>
                 <div style="margin-bottom:24px;">
                     <span style="font-size:2.5rem;font-weight:900;color:#4f46e5;">$149</span>
                     <span style="font-size:.875rem;color:#94a3b8;font-weight:500;"> MXN / mes</span>
                 </div>
                 <ul style="list-style:none;padding:0;margin:0 0 28px;display:flex;flex-direction:column;gap:10px;">
-                    @foreach(['Todo lo del plan Free', 'Análisis por audio (voz)', 'Historial completo ilimitado', 'Recomendaciones personalizadas', 'Soporte prioritario'] as $feat)
+                    @foreach(['Todo lo del plan Free', 'Análisis de emociones detallado', 'Historial de sesiones (últimas 20)', 'Calendario de bienestar', 'Recomendaciones personalizadas'] as $feat)
                     <li style="display:flex;align-items:center;gap:8px;font-size:.8125rem;color:#475569;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#4f46e5" style="width:16px;height:16px;flex-shrink:0;"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>
                         {{ $feat }}
@@ -435,7 +435,7 @@
                     <span style="font-size:2.5rem;font-weight:900;color:#a78bfa;">A medida</span>
                 </div>
                 <ul style="list-style:none;padding:0;margin:0 0 28px;display:flex;flex-direction:column;gap:10px;">
-                    @foreach(['Todo lo del plan Pro', 'Análisis facial (detección de emociones)', 'Estadísticas personales avanzadas', 'Historial ilimitado completo', 'Soporte prioritario'] as $feat)
+                    @foreach(['Todo lo del plan Pro', 'Análisis facial en tiempo real', 'Estadísticas avanzadas y gráficas', 'Historial ilimitado completo', 'Alertas de crisis + reporte clínico PDF'] as $feat)
                     <li style="display:flex;align-items:center;gap:8px;font-size:.8125rem;color:#cbd5e1;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#a78bfa" style="width:16px;height:16px;flex-shrink:0;"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd"/></svg>
                         {{ $feat }}
@@ -523,8 +523,8 @@
             {{-- Brand --}}
             <div>
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-                    <img src="/assets/img/mindra1.png" alt="" style="height:32px;width:auto;">
-                    <img src="/assets/img/mindra2.png" alt="Mindra" style="height:28px;width:auto;">
+                    <img src="/assets/img/mindra1.png" alt="" style="height:52px;width:auto;">
+                    <img src="/assets/img/mindra2.png" alt="Mindra" style="height:46px;width:auto;">
                 </div>
                 <p style="font-size:.8125rem;color:#64748b;line-height:1.65;max-width:280px;margin-bottom:14px;">
                     Liderando el futuro del bienestar emocional a través de la computación afectiva e inteligencia artificial.

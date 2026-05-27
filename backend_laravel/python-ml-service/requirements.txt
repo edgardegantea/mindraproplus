@@ -1,0 +1,17 @@
+# Mindra - Microservicio Python ML
+# Solo las dependencias necesarias para FastAPI + ML
+
+fastapi==0.136.1
+uvicorn[standard]==0.46.0
+python-multipart==0.0.20
+
+# ML / Audio
+torch==2.11.0
+torchaudio==2.11.0
+pytorch-lightning==2.6.1
+transformers==5.5.4
+openai-whisper==20250625
+numpy==2.2.6
+
+# Utils
+python-dotenv==1.2.2
