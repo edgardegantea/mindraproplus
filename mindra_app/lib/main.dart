@@ -6,26 +6,29 @@ import 'providers/auth_provider.dart';
 import 'providers/plan_provider.dart';
 import 'services/api_service.dart';
 import 'services/storage_service.dart';
+import 'services/notification_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/chat_screen.dart';
-import 'screens/history_screen.dart';
 import 'screens/onboarding_screen.dart';
-import 'screens/plans_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/wellness_screen.dart';
 import 'utils/responsive.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final api = ApiService();
-  final storage = StorageService();
+  final api      = ApiService();
+  final storage  = StorageService();
+  final notifs   = NotificationService();
+  await notifs.init();
 
   runApp(
     MultiProvider(
       providers: [
         Provider<ApiService>.value(value: api),
         Provider<StorageService>.value(value: storage),
+        Provider<NotificationService>.value(value: notifs),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(api, storage)..init(),
         ),
@@ -82,18 +85,18 @@ class _MainShell extends StatefulWidget {
 class _MainShellState extends State<_MainShell> {
   int _index = 0;
 
+  void switchTab(int index) => setState(() => _index = index);
+
   static const _screens = [
     _HomeTab(),
-    HistoryScreen(),
-    PlansScreen(),
+    WellnessScreen(),
     ProfileScreen(),
   ];
 
   static const _destinations = [
-    (icon: Icons.home_outlined, selected: Icons.home, label: 'Inicio'),
-    (icon: Icons.history_outlined, selected: Icons.history, label: 'Historial'),
-    (icon: Icons.star_outline, selected: Icons.star, label: 'Planes'),
-    (icon: Icons.person_outline, selected: Icons.person, label: 'Perfil'),
+    (icon: Icons.home_outlined,             selected: Icons.home,             label: 'Inicio'),
+    (icon: Icons.spa_outlined,              selected: Icons.spa,              label: 'Bienestar'),
+    (icon: Icons.person_outline,            selected: Icons.person,           label: 'Perfil'),
   ];
 
   @override
@@ -158,70 +161,300 @@ class _HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final name = auth.user?.name ?? 'Amigo/a';
-    final plan = auth.effectivePlan;
-    final planName = plan?.name ?? 'Free';
+    final auth     = context.watch<AuthProvider>();
+    final name     = auth.user?.name.split(' ').first ?? 'Amigo/a';
+    final plan     = auth.effectivePlan;
     final planColor = plan?.isPlus == true
         ? MindraColors.indigo
         : plan?.isPro == true
             ? MindraColors.violet
             : MindraColors.blue;
+    final hour     = DateTime.now().hour;
+    final greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
 
     return Scaffold(
       appBar: AppBar(
         title: const _MindraLogoTitle(),
+        actions: [
+          IconButton(
+            onPressed: () => _SosSheet.show(context),
+            icon: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+              ),
+              child: const Text('SOS',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold)),
+            ),
+            tooltip: 'Apoyo inmediato',
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: WebFrame(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const _MindraLogo(size: 88),
-                const SizedBox(height: 24),
-                Text(
-                  'Hola, $name',
-                  style: const TextStyle(
-                      fontSize: 30, fontWeight: FontWeight.bold),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+          children: [
+
+            // ── Saludo ────────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    planColor.withValues(alpha: 0.15),
+                    MindraColors.darkSurface,
+                  ],
                 ),
-                const SizedBox(height: 10),
-                _PlanBadge(planName: planName, color: planColor),
-                const SizedBox(height: 20),
-                const Text(
-                  '¿Cómo te sientes hoy?\nEstoy aquí para escucharte.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, height: 1.6),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: planColor.withValues(alpha: 0.22)),
+              ),
+              child: Row(children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('$greeting,',
+                          style: const TextStyle(
+                              fontSize: 14,
+                              color: MindraColors.textSecondary)),
+                      const SizedBox(height: 4),
+                      Text(name,
+                          style: const TextStyle(
+                              fontSize: 28, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      _PlanBadge(planName: plan?.name ?? 'Free', color: planColor),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 48),
-                _GradientButton(
-                  label: 'Conversar con Mindra',
-                  icon: Icons.chat_bubble_outline,
-                  onPressed: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const ChatScreen())),
+                const SizedBox(width: 16),
+                Container(
+                  width: 72,
+                  height: 72,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: MindraColors.gradientMain,
+                    boxShadow: [
+                      BoxShadow(
+                        color: MindraColors.blue.withValues(alpha: 0.35),
+                        blurRadius: 18,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Image.asset('assets/icons/mindra1.png',
+                      fit: BoxFit.contain),
                 ),
-              ],
+              ]),
             ),
-          ),
+
+            const SizedBox(height: 20),
+
+            // ── HERO: Conversar con Mindra ────────────────────────────────
+            GestureDetector(
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const ChatScreen())),
+              child: Container(
+                width: double.infinity,
+                height: MediaQuery.of(context).size.height * 0.44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      MindraColors.darkSurface,
+                      MindraColors.violet.withValues(alpha: 0.22),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                      color: MindraColors.violet.withValues(alpha: 0.40)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: MindraColors.violet.withValues(alpha: 0.18),
+                      blurRadius: 32,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/icons/mindra1.png',
+                        width: 148, height: 148, fit: BoxFit.contain),
+                    const SizedBox(height: 24),
+                    const Text('Conversar con Mindra',
+                        style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                    const SizedBox(height: 8),
+                    const Text('Presiona para comenzar tu sesión',
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: MindraColors.textSecondary)),
+                  ],
+                ),
+              ),
+            ),
+
+          ],
         ),
       ),
     );
   }
 }
 
-// ─── Widgets compartidos ──────────────────────────────────────────────────────
+// ─── SOS Sheet ────────────────────────────────────────────────────────────────
 
-class _MindraLogo extends StatelessWidget {
-  final double size;
-  const _MindraLogo({required this.size});
+class _SosSheet {
+  static void show(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: MindraColors.darkSurface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => const _SosContent(),
+    );
+  }
+}
+
+class _SosContent extends StatelessWidget {
+  const _SosContent();
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset('assets/icons/mindra1.png',
-        width: size, height: size, fit: BoxFit.contain);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: 40, height: 4,
+          decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(99)),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.12),
+              shape: BoxShape.circle),
+          child: const Icon(Icons.emergency, color: Colors.red, size: 32),
+        ),
+        const SizedBox(height: 12),
+        const Text('¿Necesitas apoyo inmediato?',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        const Text(
+          'Estás en un espacio seguro. Estas líneas están disponibles ahora mismo.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: MindraColors.textSecondary, fontSize: 13),
+        ),
+        const SizedBox(height: 20),
+        _SosOption(
+          emoji: '📞',
+          title: 'SAPTEL',
+          subtitle: 'Crisis emocional · Gratuito 24/7',
+          detail: '55 5259-8121',
+          color: Colors.red,
+          onTap: () {},
+        ),
+        const SizedBox(height: 10),
+        _SosOption(
+          emoji: '🏥',
+          title: 'IMSS Salud Mental',
+          subtitle: 'Apoyo psicológico gratuito',
+          detail: '800 890-2000',
+          color: const Color(0xFFdc2626),
+          onTap: () {},
+        ),
+        const SizedBox(height: 10),
+        _SosOption(
+          emoji: '🚨',
+          title: 'Emergencias',
+          subtitle: 'Riesgo inmediato para ti o alguien más',
+          detail: '911',
+          color: Colors.orange,
+          onTap: () {},
+        ),
+        const SizedBox(height: 10),
+        _SosOption(
+          emoji: '💬',
+          title: 'Hablar con Mindra',
+          subtitle: 'IA de apoyo disponible ahora',
+          detail: 'Abrir chat',
+          color: MindraColors.blue,
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ChatScreen()));
+          },
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          'Si estás pensando en hacerte daño, llama al SAPTEL ahora.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 11, color: Colors.red),
+        ),
+      ]),
+    );
   }
 }
+
+class _SosOption extends StatelessWidget {
+  final String emoji;
+  final String title;
+  final String subtitle;
+  final String detail;
+  final Color color;
+  final VoidCallback onTap;
+  const _SosOption({
+    required this.emoji, required this.title, required this.subtitle,
+    required this.detail, required this.color, required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(children: [
+          Text(emoji, style: const TextStyle(fontSize: 24)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(subtitle, style: const TextStyle(
+                  fontSize: 11, color: MindraColors.textSecondary)),
+            ],
+          )),
+          Text(detail, style: TextStyle(
+              fontSize: 13, fontWeight: FontWeight.bold, color: color)),
+          const SizedBox(width: 4),
+          Icon(Icons.arrow_forward_ios, size: 12, color: color),
+        ]),
+      ),
+    );
+  }
+}
+
+// ─── Widgets compartidos ──────────────────────────────────────────────────────
 
 class _MindraLogoTitle extends StatelessWidget {
   const _MindraLogoTitle();
@@ -268,40 +501,3 @@ class _PlanBadge extends StatelessWidget {
   }
 }
 
-class _GradientButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-  const _GradientButton(
-      {required this.label, required this.icon, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: MindraColors.gradientMain,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: MindraColors.blue.withValues(alpha: 0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: ElevatedButton.icon(
-        icon: Icon(icon),
-        label: Text(label, style: const TextStyle(fontSize: 16)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          foregroundColor: Colors.white,
-          shadowColor: Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30)),
-        ),
-        onPressed: onPressed,
-      ),
-    );
-  }
-}

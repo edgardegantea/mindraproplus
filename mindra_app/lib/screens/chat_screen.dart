@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 import 'dart:math' show Random;
+import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -47,6 +48,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<_Msg> _messages = [];
   bool _isRecording = false;
   bool _sending = false;
+  XFile? _pendingImage; // imagen facial capturada, pendiente de enviar
 
   @override
   void initState() {
@@ -124,29 +126,105 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _isRecording = true);
   }
 
+  /// Abre la cámara frontal y captura una foto para análisis facial (Plus).
+  Future<void> _captureFace() async {
+    if (kIsWeb || _sending) return;
+    try {
+      final cameras = await availableCameras();
+      final front = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.front,
+        orElse: () => cameras.first,
+      );
+      if (!mounted) return;
+      final image = await Navigator.push<XFile?>(
+        context,
+        MaterialPageRoute(builder: (_) => _FaceCaptureScreen(camera: front)),
+      );
+      if (image != null) {
+        setState(() => _pendingImage = image);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('📸 Foto capturada — escribe un mensaje y envía para incluir el análisis facial.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al abrir cámara: $e')),
+        );
+      }
+    }
+  }
+
+  /// Muestra diálogo de alerta de crisis cuando ansiedad > 75%.
+  void _showCrisisAlert() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        backgroundColor: MindraColors.darkSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.red.shade400),
+          const SizedBox(width: 8),
+          const Text('Nivel de alerta elevado'),
+        ]),
+        content: const Text(
+          'Mindra detectó un nivel de ansiedad alto en tu mensaje.\n\n'
+          'Si estás pasando por un momento difícil, recuerda que hay apoyo disponible:\n\n'
+          '• Habla con alguien de confianza\n'
+          '• Línea de la vida: 800 911 2000 (México, 24h)\n'
+          '• Respira profundo — estás a salvo.',
+          style: TextStyle(height: 1.5, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _send({String? audioPath}) async {
     final text = _textCtrl.text.trim();
     if (text.isEmpty && audioPath == null) return;
     _textCtrl.clear();
 
+    final imageToSend = _pendingImage;
     setState(() {
       _messages.add(_Msg(
-        text: audioPath != null ? '🎵 Nota de voz' : text,
+        text: audioPath != null
+            ? (imageToSend != null ? '🎵 Nota de voz + 📸 análisis facial' : '🎵 Nota de voz')
+            : (imageToSend != null ? '$text\n📸 Análisis facial incluido' : text),
         isUser: true,
       ));
       _sending = true;
+      _pendingImage = null;
     });
     _scrollToBottom();
 
     final api = context.read<ApiService>();
     final auth = context.read<AuthProvider>();
     final showEmotions = auth.effectivePlan?.hasFeature('emociones') ?? false;
+    final hasCrisisAlerts = auth.effectivePlan?.hasFeature('crisis_alerts') ?? false;
 
     try {
       XFile? audioFile;
       if (audioPath != null) audioFile = XFile(audioPath);
 
-      final InferenceResult result = await api.predict(text, audioFile: audioFile);
+      final InferenceResult result =
+          await api.predict(text, audioFile: audioFile, imageFile: imageToSend);
+
+      // Alerta de crisis (Plus) si ansiedad > 75%
+      if (hasCrisisAlerts &&
+          result.probabilidadAnsiedad != null &&
+          result.probabilidadAnsiedad! > 0.75) {
+        if (mounted) _showCrisisAlert();
+      }
 
       // Delay aleatorio (50–1000 ms) para simular que Mindra "está escribiendo"
       // incluso cuando el backend ya respondió, haciendo la UX más natural.
@@ -169,7 +247,10 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     } catch (e) {
       setState(() {
-        _messages.add(_Msg(text: 'Error: $e', isUser: false));
+        _messages.add(_Msg(
+          text: 'En este momento tengo dificultades para conectarme. Por favor intenta en unos momentos. Si necesitas apoyo urgente, usa el botón SOS.',
+          isUser: false,
+        ));
         _sending = false;
       });
     }
@@ -271,81 +352,128 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildInput() {
     final plan = context.read<AuthProvider>().effectivePlan;
-    final hasAudio = plan?.hasFeature('audio') ?? false;
+    final hasAudio  = plan?.hasFeature('audio')   ?? false;
+    final hasCamera = plan?.hasFeature('imagen')  ?? false;
 
     return SafeArea(
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        decoration: BoxDecoration(
-          color: MindraColors.darkSurface,
-          border: const Border(top: BorderSide(color: MindraColors.darkBorder)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _textCtrl,
-                maxLines: null,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _send(),
-                decoration: InputDecoration(
-                  hintText: 'Escribe un mensaje…',
-                  hintStyle: const TextStyle(color: MindraColors.textSecondary),
-                  filled: true,
-                  fillColor: MindraColors.dark,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(color: MindraColors.darkBorder),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(color: MindraColors.darkBorder),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(color: MindraColors.blue, width: 1.5),
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Badge de imagen facial pendiente
+          if (_pendingImage != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              color: MindraColors.indigo.withValues(alpha: 0.15),
+              child: Row(children: [
+                const Icon(Icons.face, size: 16, color: MindraColors.indigo),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text('Foto facial lista para enviar',
+                      style: TextStyle(fontSize: 12, color: MindraColors.indigo)),
                 ),
-              ),
+                GestureDetector(
+                  onTap: () => setState(() => _pendingImage = null),
+                  child: const Icon(Icons.close, size: 16, color: MindraColors.indigo),
+                ),
+              ]),
             ),
-            if (hasAudio) ...[
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: _toggleRecording,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isRecording ? MindraColors.error : MindraColors.blue,
-                    boxShadow: _isRecording
-                        ? [BoxShadow(color: MindraColors.error.withValues(alpha: 0.4), blurRadius: 12, spreadRadius: 2)]
-                        : [],
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            decoration: BoxDecoration(
+              color: MindraColors.darkSurface,
+              border: const Border(top: BorderSide(color: MindraColors.darkBorder)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                // Botón de cámara facial (Plus)
+                if (hasCamera && !kIsWeb) ...[
+                  GestureDetector(
+                    onTap: _captureFace,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _pendingImage != null
+                            ? MindraColors.indigo
+                            : MindraColors.indigo.withValues(alpha: 0.15),
+                      ),
+                      child: Icon(
+                        _pendingImage != null ? Icons.face : Icons.face_outlined,
+                        color: MindraColors.indigo,
+                        size: 22,
+                      ),
+                    ),
                   ),
-                  child: Icon(
-                    _isRecording ? Icons.stop : Icons.mic,
-                    color: Colors.white,
-                    size: 22,
+                  const SizedBox(width: 6),
+                ],
+                Expanded(
+                  child: TextField(
+                    controller: _textCtrl,
+                    maxLines: null,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(),
+                    decoration: InputDecoration(
+                      hintText: 'Escribe un mensaje…',
+                      hintStyle: const TextStyle(color: MindraColors.textSecondary),
+                      filled: true,
+                      fillColor: MindraColors.dark,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: const BorderSide(color: MindraColors.darkBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: const BorderSide(color: MindraColors.darkBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: const BorderSide(color: MindraColors.blue, width: 1.5),
+                      ),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    ),
                   ),
                 ),
-              ),
-            ],
-            const SizedBox(width: 6),
-            IconButton(
-              icon: const Icon(Icons.send_rounded, color: MindraColors.blue),
-              onPressed: () => _send(),
+                if (hasAudio) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _toggleRecording,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _isRecording ? MindraColors.error : MindraColors.blue,
+                        boxShadow: _isRecording
+                            ? [BoxShadow(color: MindraColors.error.withValues(alpha: 0.4), blurRadius: 12, spreadRadius: 2)]
+                            : [],
+                      ),
+                      child: Icon(
+                        _isRecording ? Icons.stop : Icons.mic,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 6),
+                IconButton(
+                  icon: const Icon(Icons.send_rounded, color: MindraColors.blue),
+                  onPressed: () => _send(),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -454,4 +582,122 @@ class _Chip extends StatelessWidget {
           style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
     );
   }
+}
+
+// ─── Pantalla de captura facial (Plus) ───────────────────────────────────────
+
+class _FaceCaptureScreen extends StatefulWidget {
+  final CameraDescription camera;
+  const _FaceCaptureScreen({required this.camera});
+
+  @override
+  State<_FaceCaptureScreen> createState() => _FaceCaptureScreenState();
+}
+
+class _FaceCaptureScreenState extends State<_FaceCaptureScreen> {
+  late CameraController _ctrl;
+  bool _ready = false;
+  bool _capturing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = CameraController(widget.camera, ResolutionPreset.medium,
+        enableAudio: false);
+    _ctrl.initialize().then((_) {
+      if (mounted) setState(() => _ready = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _capture() async {
+    if (!_ready || _capturing) return;
+    setState(() => _capturing = true);
+    try {
+      final file = await _ctrl.takePicture();
+      if (mounted) Navigator.pop(context, XFile(file.path));
+    } catch (e) {
+      if (mounted) {
+        setState(() => _capturing = false);
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error al capturar: $e')));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: const Text('Análisis facial'),
+      ),
+      body: _ready
+          ? Stack(
+              alignment: Alignment.center,
+              children: [
+                CameraPreview(_ctrl),
+                // Guía oval para centrar el rostro
+                CustomPaint(
+                  size: MediaQuery.of(context).size,
+                  painter: _OvalGuidePainter(),
+                ),
+                Positioned(
+                  bottom: 48,
+                  child: Column(children: [
+                    const Text('Centra tu rostro en el óvalo',
+                        style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: _capture,
+                      child: Container(
+                        width: 68,
+                        height: 68,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          color: _capturing
+                              ? Colors.white54
+                              : Colors.white.withValues(alpha: 0.15),
+                        ),
+                        child: _capturing
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Icon(Icons.camera_alt,
+                                color: Colors.white, size: 32),
+                      ),
+                    ),
+                  ]),
+                ),
+              ],
+            )
+          : const Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+class _OvalGuidePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(size.width / 2, size.height * 0.42),
+          width: size.width * 0.62,
+          height: size.height * 0.46),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

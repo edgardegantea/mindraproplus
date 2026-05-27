@@ -24,23 +24,20 @@ class _PlansScreenState extends State<PlansScreen> {
         (_) => context.read<PlanProvider>().loadPlans());
   }
 
-  // ── Pago con MercadoPago ─────────────────────────────────────────────────
+  // ── Inicio de pago / solicitud según plan ────────────────────────────────
 
-  /// En web muestra un diálogo indicando que el pago solo está disponible
-  /// en la app móvil. En móvil abre el checkout de MercadoPago.
+  /// Plus → formulario de solicitud institucional.
+  /// Pro  → checkout MercadoPago.
+  /// Web  → diálogo informativo (solo app móvil).
   Future<void> _startPayment(Plan plan) async {
     if (plan.isFree) return;
 
-    // Plus es "A medida" — abrir la página web de información/suscripción.
+    // Plus usa formulario de solicitud institucional.
     if (plan.isPlus) {
-      final url = Uri.parse('https://mindra.cafined.org/planes/plus');
-      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('No se pudo abrir el navegador'),
-            backgroundColor: MindraColors.error,
-          ));
-        }
+      if (mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const _PlusRequestSheet()),
+        );
       }
       return;
     }
@@ -53,7 +50,7 @@ class _PlansScreenState extends State<PlansScreen> {
       return;
     }
 
-    // Pro tiene checkout con MercadoPago.
+    // Pro → checkout MercadoPago.
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -165,6 +162,23 @@ class _PlanCard extends StatelessWidget {
           ? MindraColors.violet
           : MindraColors.blue;
 
+  static Future<void> _openContract(BuildContext context, String slug) async {
+    final contractSlug = switch (slug) {
+      'free' => 'free',
+      'pro'  => 'pro',
+      _      => 'plus',
+    };
+    final url = Uri.parse('https://mindra.cafined.org/contratos/$contractSlug');
+    try {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo abrir el contrato')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final features = _featuresBySlug[plan.slug] ?? [];
@@ -241,11 +255,28 @@ class _PlanCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10)),
                   ),
                   onPressed: onUpgrade,
-                  icon: Icon(plan.isPlus ? Icons.open_in_browser : Icons.payment, size: 18),
-                  label: Text(plan.isPlus ? 'Más información' : 'Suscribirse a ${plan.name}'),
+                  icon: Icon(plan.isPlus ? Icons.mail_outline : Icons.payment, size: 18),
+                  label: Text(plan.isPlus ? 'Solicitar acceso' : 'Suscribirse a ${plan.name}'),
                 ),
               ),
             ],
+
+            // Enlace "Ver contrato"
+            const SizedBox(height: 10),
+            Center(
+              child: TextButton.icon(
+                onPressed: () => _openContract(context, plan.slug),
+                style: TextButton.styleFrom(
+                  foregroundColor: _color,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+                icon: Icon(Icons.description_outlined, size: 15, color: _color),
+                label: Text(
+                  'Ver contrato del plan ${plan.name}',
+                  style: TextStyle(fontSize: 12, color: _color),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -269,10 +300,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   bool _waitingPayment = false;
   int? _orderId;
 
-  /// Precios en MXN para cada plan y periodo
+  /// Precios en MXN (solo Pro — Plus usa solicitud institucional)
   static const _prices = {
-    'pro':  {'monthly': 149, 'annual': 1430},
-    'plus': {'monthly': 199, 'annual': 1910},
+    'pro': {'monthly': 149, 'annual': 1430},
   };
 
   int get _priceMonthly => _prices[widget.plan.slug]?['monthly'] ?? 149;
@@ -776,3 +806,315 @@ class _WebUpgradeDialog extends StatelessWidget {
     );
   }
 }
+
+// ─── Formulario de solicitud Plus (pantalla completa) ────────────────────────
+
+class _PlusRequestSheet extends StatefulWidget {
+  const _PlusRequestSheet();
+
+  @override
+  State<_PlusRequestSheet> createState() => _PlusRequestSheetState();
+}
+
+class _PlusRequestSheetState extends State<_PlusRequestSheet> {
+  final _formKey = GlobalKey<FormState>();
+
+  // Solicitante
+  final _reqNameCtrl  = TextEditingController();
+  final _reqPosCtrl   = TextEditingController();
+  final _reqEmailCtrl = TextEditingController();
+  final _reqPhoneCtrl = TextEditingController();
+  // Institución
+  final _orgNameCtrl    = TextEditingController();
+  final _orgSectorCtrl  = TextEditingController();
+  final _orgWebCtrl     = TextEditingController();
+  final _orgCountryCtrl = TextEditingController();
+  final _orgStateCtrl   = TextEditingController();
+  final _orgCityCtrl    = TextEditingController();
+  final _orgAddrCtrl    = TextEditingController();
+  String _orgType       = 'universidad';
+  // Facturación
+  final _rfcCtrl    = TextEditingController();
+  final _razonCtrl  = TextEditingController();
+  final _regimenCtrl= TextEditingController();
+  final _cfdiCtrl   = TextEditingController();
+  final _billEmailCtrl = TextEditingController();
+  // Proyecto
+  String _useCase         = 'investigacion';
+  final _numUsersCtrl     = TextEditingController();
+  final _descCtrl         = TextEditingController();
+  final _howFoundCtrl     = TextEditingController();
+  final _commentsCtrl     = TextEditingController();
+
+  bool _sending = false;
+  bool _sent    = false;
+
+  static const _orgTypes = {
+    'universidad':     'Universidad / Instituto educativo',
+    'hospital':        'Hospital / Centro de salud',
+    'clinica':         'Clínica / Consultorio privado',
+    'empresa_privada': 'Empresa privada',
+    'gobierno':        'Institución gubernamental',
+    'ong':             'ONG / Asociación civil',
+    'otro':            'Otro',
+  };
+  static const _useCases = {
+    'investigacion': 'Investigación académica',
+    'clinico':       'Uso clínico / terapéutico',
+    'institucional': 'Implementación institucional',
+    'personal':      'Uso personal avanzado',
+    'otro':          'Otro',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    final auth = context.read<AuthProvider>();
+    _reqNameCtrl.text  = auth.user?.name  ?? '';
+    _reqEmailCtrl.text = auth.user?.email ?? '';
+    _orgCountryCtrl.text = 'México';
+  }
+
+  @override
+  void dispose() {
+    for (final c in [
+      _reqNameCtrl, _reqPosCtrl, _reqEmailCtrl, _reqPhoneCtrl,
+      _orgNameCtrl, _orgSectorCtrl, _orgWebCtrl, _orgCountryCtrl,
+      _orgStateCtrl, _orgCityCtrl, _orgAddrCtrl,
+      _rfcCtrl, _razonCtrl, _regimenCtrl, _cfdiCtrl, _billEmailCtrl,
+      _numUsersCtrl, _descCtrl, _howFoundCtrl, _commentsCtrl,
+    ]) { c.dispose(); }
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _sending = true);
+    try {
+      await context.read<ApiService>().submitPlusRequest(
+        requesterName:     _reqNameCtrl.text.trim(),
+        requesterPosition: _reqPosCtrl.text.trim(),
+        requesterEmail:    _reqEmailCtrl.text.trim(),
+        requesterPhone:    _reqPhoneCtrl.text.trim(),
+        orgName:           _orgNameCtrl.text.trim(),
+        orgType:           _orgType,
+        orgSector:         _orgSectorCtrl.text.trim(),
+        orgWebsite:        _orgWebCtrl.text.trim(),
+        orgCountry:        _orgCountryCtrl.text.trim(),
+        orgState:          _orgStateCtrl.text.trim(),
+        orgCity:           _orgCityCtrl.text.trim(),
+        orgAddress:        _orgAddrCtrl.text.trim(),
+        billingRfc:        _rfcCtrl.text.trim(),
+        billingRazonSocial:_razonCtrl.text.trim(),
+        billingRegimen:    _regimenCtrl.text.trim(),
+        billingCfdi:       _cfdiCtrl.text.trim(),
+        billingEmail:      _billEmailCtrl.text.trim(),
+        useCase:           _useCase,
+        numUsers:          _numUsersCtrl.text.trim(),
+        projectDescription:_descCtrl.text.trim(),
+        howFound:          _howFoundCtrl.text.trim(),
+        additionalComments:_commentsCtrl.text.trim(),
+      );
+      if (mounted) setState(() { _sent = true; _sending = false; });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _sending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: MindraColors.error),
+        );
+      }
+    }
+  }
+
+  InputDecoration _dec(String hint) => InputDecoration(
+    hintText: hint,
+    hintStyle: const TextStyle(color: MindraColors.textSecondary, fontSize: 13),
+    filled: true, fillColor: MindraColors.dark,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: MindraColors.darkBorder)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: MindraColors.darkBorder)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: MindraColors.indigo, width: 1.5)),
+    errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: MindraColors.error)),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+    isDense: true,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    // Abre como pantalla completa por la cantidad de campos
+    return Scaffold(
+      backgroundColor: MindraColors.dark,
+      appBar: AppBar(
+        title: const Text('Solicitar Plan Plus'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: _sent
+          ? _buildSuccess()
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+                children: [
+                  // Header
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: MindraColors.indigo.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text('Plan Plus · A medida',
+                        style: TextStyle(color: MindraColors.indigo, fontSize: 12, fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Completa el formulario — recibirás una copia en tu correo y te contactamos en 24 horas.',
+                    style: TextStyle(color: MindraColors.textSecondary, fontSize: 13, height: 1.5),
+                  ),
+
+                  // ── 1. Solicitante ─────────────────────────────────────
+                  _sectionTitle('1. Datos del solicitante'),
+                  _tf(_reqNameCtrl,  'Nombre completo *',      'Tu nombre',         req: true),
+                  _tf(_reqPosCtrl,   'Cargo / Puesto',         'Director, Investigador…'),
+                  _tf(_reqEmailCtrl, 'Correo electrónico *',   'correo@ejemplo.com',
+                      type: TextInputType.emailAddress, req: true,
+                      emailValidation: true),
+                  _tf(_reqPhoneCtrl, 'Teléfono / WhatsApp',    '+52 800 000 0000',
+                      type: TextInputType.phone),
+
+                  // ── 2. Institución ─────────────────────────────────────
+                  _sectionTitle('2. Institución / Empresa'),
+                  _tf(_orgNameCtrl, 'Nombre de la institución *', 'Nombre oficial', req: true),
+                  _dropdown('Tipo de institución *', _orgType, _orgTypes,
+                      (v) => setState(() => _orgType = v ?? 'universidad')),
+                  _tf(_orgSectorCtrl, 'Giro / Sector',   'Salud mental, Educación…'),
+                  _tf(_orgWebCtrl,    'Sitio web',        'https://…',
+                      type: TextInputType.url),
+                  _tf(_orgCountryCtrl,'País *',           'México', req: true),
+                  _tf(_orgStateCtrl,  'Estado / Provincia','Michoacán…'),
+                  _tf(_orgCityCtrl,   'Ciudad',           'Morelia…'),
+                  _tf(_orgAddrCtrl,   'Dirección',        'Calle, número, colonia…'),
+
+                  // ── 3. Facturación ─────────────────────────────────────
+                  _sectionTitle('3. Datos de facturación'),
+                  _tf(_rfcCtrl,     'RFC / Número fiscal',  'XAXX010101000'),
+                  _tf(_razonCtrl,   'Razón social',          'Nombre legal completo'),
+                  _tf(_regimenCtrl, 'Régimen fiscal',        'Ej. 601 — General de Ley…'),
+                  _tf(_cfdiCtrl,    'Uso de CFDI',           'G03 — Gastos en general'),
+                  _tf(_billEmailCtrl,'Correo para facturas', 'facturas@empresa.com',
+                      type: TextInputType.emailAddress),
+
+                  // ── 4. Proyecto ────────────────────────────────────────
+                  _sectionTitle('4. Descripción del proyecto'),
+                  _dropdown('Tipo de uso *', _useCase, _useCases,
+                      (v) => setState(() => _useCase = v ?? 'investigacion')),
+                  _tf(_numUsersCtrl, 'Usuarios estimados',    'Ej. 10–50, más de 100…'),
+                  _tf(_descCtrl,     'Descripción del proyecto *',
+                      'Describe cómo planeas usar Mindra…',
+                      maxLines: 4, req: true),
+                  _tf(_howFoundCtrl, '¿Cómo nos encontraste?','Redes sociales, colega…'),
+                  _tf(_commentsCtrl, 'Comentarios adicionales','Cualquier información extra…',
+                      maxLines: 3),
+
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: MindraColors.indigo,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _sending ? null : _submit,
+                      child: _sending
+                          ? const SizedBox(width: 20, height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('Enviar solicitud',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildSuccess() => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(36),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.check_circle_outline, color: Colors.green, size: 72),
+        const SizedBox(height: 18),
+        const Text('¡Solicitud enviada!',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center),
+        const SizedBox(height: 10),
+        const Text(
+          'Revisa tu correo — recibirás una copia de tu solicitud.\nNos pondremos en contacto en menos de 24 horas.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: MindraColors.textSecondary, height: 1.6),
+        ),
+        const SizedBox(height: 32),
+        FilledButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cerrar'),
+        ),
+      ]),
+    ),
+  );
+
+  Widget _sectionTitle(String t) => Padding(
+    padding: const EdgeInsets.only(top: 24, bottom: 12),
+    child: Text(t,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800,
+            letterSpacing: .06, color: MindraColors.indigo,
+            decoration: TextDecoration.none)),
+  );
+
+  Widget _tf(TextEditingController ctrl, String label, String hint, {
+    TextInputType type = TextInputType.text,
+    int maxLines = 1,
+    bool req = false,
+    bool emailValidation = false,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 5),
+      TextFormField(
+        controller: ctrl,
+        keyboardType: type,
+        maxLines: maxLines,
+        decoration: _dec(hint),
+        validator: (v) {
+          if (req && (v?.trim().isEmpty ?? true)) return 'Campo requerido';
+          if (emailValidation && v!.isNotEmpty && !v.contains('@')) return 'Email inválido';
+          return null;
+        },
+      ),
+    ]),
+  );
+
+  Widget _dropdown(String label, String value, Map<String, String> items,
+      ValueChanged<String?> onChanged) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 5),
+      DropdownButtonFormField<String>(
+        value: value,
+        decoration: _dec('Selecciona'),
+        items: items.entries
+            .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, style: const TextStyle(fontSize: 13))))
+            .toList(),
+        onChanged: onChanged,
+      ),
+    ]),
+  );
+}
+
