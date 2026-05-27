@@ -26,6 +26,11 @@ mkdir -p bootstrap/cache
 echo "[2/8] Installing dependencies..."
 composer install --no-dev --no-scripts --no-interaction --optimize-autoloader
 
+# Clear stale bootstrap cache BEFORE package:discover — dev packages removed by
+# --no-dev (e.g. Laravel\Pail) are still referenced in the old packages.php cache,
+# which causes package:discover to fail when it tries to load the Application.
+rm -f bootstrap/cache/*.php
+
 # 3. Run post-autoload scripts manually (package:discover needs vendor/ present)
 echo "[3/8] Running post-install scripts..."
 php artisan package:discover --ansi
