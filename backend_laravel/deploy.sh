@@ -57,6 +57,9 @@ else
     grep -q "MINDRABACK_URL"              .env || echo -e "\nMINDRABACK_URL=http://localhost:8001"   >> .env
     grep -q "MINDRABACK_TIMEOUT"          .env || echo -e "MINDRABACK_TIMEOUT=60"                   >> .env
     grep -q "MINDRABACK_CONNECT_TIMEOUT"  .env || echo -e "MINDRABACK_CONNECT_TIMEOUT=8"            >> .env
+    # Asegurar que app.mindra.cafined.org esté en los dominios stateful de Sanctum
+    grep -q "SANCTUM_STATEFUL_DOMAINS" .env || echo -e "\nSANCTUM_STATEFUL_DOMAINS=mindra.cafined.org,app.mindra.cafined.org" >> .env
+    grep -q "app\.mindra\.cafined\.org" .env || sed -i.bak 's/SANCTUM_STATEFUL_DOMAINS=mindra\.cafined\.org$/SANCTUM_STATEFUL_DOMAINS=mindra.cafined.org,app.mindra.cafined.org/' .env && rm -f .env.bak
     grep -q "DB_CONNECTION" .env && sed -i.bak 's/DB_CONNECTION=sqlite/DB_CONNECTION=mysql/' .env && rm -f .env.bak
 fi
 

@@ -22,5 +22,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Asegurar que las respuestas de error en rutas API siempre incluyan
+        // los headers CORS, incluso cuando la excepción bypasea el middleware.
+        $exceptions->respond(function (\Illuminate\Http\Response|\Symfony\Component\HttpFoundation\Response $response, \Throwable $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/*')) {
+                $origin = $request->headers->get('Origin', '*');
+                $response->headers->set('Access-Control-Allow-Origin', '*');
+                $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+                $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+            }
+            return $response;
+        });
     })->create();
