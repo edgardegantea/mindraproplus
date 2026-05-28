@@ -55,8 +55,9 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/mi-plan',   [HomeController::class, 'miPlan'])->name('mi-plan');
-    Route::get('/chat',      [ChatController::class, 'index'])->name('chat');
-    Route::post('/chat/send',[ChatController::class, 'send'])->name('chat.send');
+    Route::get('/chat',            [ChatController::class, 'index'])->name('chat');
+    Route::post('/chat/send',      [ChatController::class, 'send'])->name('chat.send');
+    Route::post('/chat/transcribe',[ChatController::class, 'transcribe'])->name('chat.transcribe');
     Route::post('/logout',   [AuthController::class, 'logout'])->name('logout');
 });
 

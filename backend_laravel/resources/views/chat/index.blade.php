@@ -220,10 +220,18 @@
             flex:1; min-width:160px; height:28px; accent-color:#6366f1;
         }
         .audio-remove {
-            margin-left:auto; font-size:.6875rem; color:#94a3b8; background:none;
+            font-size:.6875rem; color:#94a3b8; background:none;
             border:none; cursor:pointer; display:flex; align-items:center; gap:3px; font-family:inherit;
         }
         .audio-remove:hover { color:#ef4444; }
+        .btn-transcribe {
+            font-size:.6875rem; color:#6366f1; background:#eef2ff;
+            border:1px solid #c7d2fe; border-radius:6px; padding:3px 8px;
+            cursor:pointer; display:flex; align-items:center; gap:4px; font-family:inherit;
+            white-space:nowrap; transition:background .15s;
+        }
+        .btn-transcribe:hover { background:#e0e7ff; }
+        .btn-transcribe:disabled { opacity:.5; cursor:not-allowed; }
         .rec-timer {
             font-size:.72rem; color:#ef4444; font-variant-numeric:tabular-nums;
             font-weight:600; min-width:36px;
@@ -684,6 +692,7 @@
 
             {{-- Textarea --}}
             <textarea x-model="text"
+                      x-ref="chatInput"
                       @keydown.enter.prevent="!$event.shiftKey && send()"
                       :disabled="loading || recording"
                       rows="1"
@@ -704,7 +713,21 @@
         <div x-show="audioBlob && !recording" x-transition class="audio-ready">
             <span class="audio-ready-dot"></span>
             <audio x-bind:src="audioUrl" controls class="audio-preview" preload="metadata"></audio>
-            <span x-show="audioDuration > 0" style="font-size:.7rem;color:#94a3b8;" x-text="Math.floor(audioDuration/60).toString().padStart(2,'0')+':'+(Math.round(audioDuration)%60).toString().padStart(2,'0')"></span>
+            <span x-show="audioDuration > 0" style="font-size:.7rem;color:#94a3b8;white-space:nowrap;" x-text="Math.floor(audioDuration/60).toString().padStart(2,'0')+':'+(Math.round(audioDuration)%60).toString().padStart(2,'0')"></span>
+            {{-- Botón transcribir --}}
+            <button @click="transcribeAudio()" :disabled="transcribing || loading" class="btn-transcribe">
+                <template x-if="!transcribing">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px;">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-5.5-2.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0ZM10 12a5.99 5.99 0 0 0-4.793 2.39A6.483 6.483 0 0 0 10 16.5a6.483 6.483 0 0 0 4.793-2.11A5.99 5.99 0 0 0 10 12Z" clip-rule="evenodd"/>
+                    </svg>
+                </template>
+                <template x-if="transcribing">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px;animation:spin 1s linear infinite;">
+                        <path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z" clip-rule="evenodd"/>
+                    </svg>
+                </template>
+                <span x-text="transcribing ? 'Transcribiendo…' : 'Transcribir'"></span>
+            </button>
             <button @click="clearAudio()" class="audio-remove">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px;">
                     <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
@@ -740,6 +763,7 @@ function chat() {
         loading: false,
         error: null,
         recording: false,
+        transcribing: false,
         audioBlob: null,
         audioUrl: null,
         audioDuration: 0,
@@ -913,6 +937,44 @@ function chat() {
             if (this.audioUrl) { URL.revokeObjectURL(this.audioUrl); this.audioUrl = null; }
             this.audioBlob = null;
             this.audioDuration = 0;
+        },
+
+        async transcribeAudio() {
+            if (!this.audioBlob || this.transcribing) return;
+            this.transcribing = true;
+            this.error = null;
+
+            try {
+                const ext = this.audioMime.includes('ogg') ? 'ogg'
+                          : this.audioMime.includes('mp4') ? 'mp4'
+                          : 'webm';
+                const fd = new FormData();
+                fd.append('audio', this.audioBlob, `recording.${ext}`);
+
+                const res = await fetch('{{ route("chat.transcribe") }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
+                    },
+                    body: fd,
+                });
+                const data = await res.json();
+
+                if (!data.ok) {
+                    this.error = data.error ?? 'No se pudo transcribir el audio.';
+                } else {
+                    // Poner la transcripción en el textarea y limpiar el audio
+                    this.text = (this.text.trim() ? this.text.trim() + ' ' : '') + data.text.trim();
+                    this.clearAudio();
+                    // Focus al textarea
+                    this.$nextTick(() => this.$refs.chatInput?.focus());
+                }
+            } catch {
+                this.error = 'No se pudo conectar con el servidor para transcribir.';
+            } finally {
+                this.transcribing = false;
+            }
         },
 
         async toggleRecording() {

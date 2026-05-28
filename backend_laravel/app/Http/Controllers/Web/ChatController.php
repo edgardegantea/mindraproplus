@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\InferenceRequest;
 use App\Services\InferenceService;
+use Illuminate\Http\Request;
 
 class ChatController extends Controller
 {
@@ -14,6 +15,36 @@ class ChatController extends Controller
     {
         $features = auth()->user()->features();
         return view('chat.index', compact('features'));
+    }
+
+    /**
+     * POST /chat/transcribe
+     * Transcribe el audio enviado y devuelve el texto.
+     * El usuario puede editarlo antes de enviarlo como inferencia.
+     */
+    public function transcribe(Request $request)
+    {
+        $request->validate([
+            'audio' => 'required|file|mimes:mp3,wav,m4a,aac,ogg,mp4,webm|mimetypes:audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/webm,video/webm|max:20480',
+        ]);
+
+        $result = $this->inferenceService->transcribe(
+            $request->file('audio'),
+            'es'
+        );
+
+        if (!$result['ok']) {
+            return response()->json([
+                'ok'    => false,
+                'error' => $result['error'] ?? 'No se pudo transcribir el audio.',
+            ], 503);
+        }
+
+        return response()->json([
+            'ok'       => true,
+            'text'     => $result['text'],
+            'language' => $result['language'] ?? 'es',
+        ]);
     }
 
     public function send(InferenceRequest $request)
