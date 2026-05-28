@@ -157,8 +157,14 @@ class AnxietyInferenceService:
                 prob = round(random.uniform(0.1, 0.9), 3)
                 print("ADVERTENCIA: Usando predicción dummy - modelo no cargado")
             else:
-                # Preparar inputs
-                input_values, attention_mask_audio = self._preparar_audio(audio_path)
+                # Preparar audio (tensores dummy de zeros si no hay archivo)
+                if audio_path is not None:
+                    input_values, attention_mask_audio = self._preparar_audio(audio_path)
+                else:
+                    # Inferencia solo-texto: audio dummy de silencio
+                    input_values = torch.zeros(MAX_AUDIO_LEN, dtype=torch.float32)
+                    attention_mask_audio = torch.zeros(MAX_AUDIO_LEN, dtype=torch.long)
+
                 input_ids, attention_mask_text = self._preparar_texto(final_text)
 
                 batch = {
@@ -192,7 +198,7 @@ class AnxietyInferenceService:
 class AnxietyLightningModule(pl.LightningModule):
     def __init__(self, model, lr=1e-5):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=['model'])
         self.model = model
         self.criterion = torch.nn.BCEWithLogitsLoss()
 
