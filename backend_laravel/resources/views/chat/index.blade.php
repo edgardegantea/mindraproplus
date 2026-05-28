@@ -210,17 +210,24 @@
 
         .audio-ready {
             display:flex; align-items:center; gap:8px; font-size:.75rem; color:#64748b;
-            padding:6px 12px; margin-top:6px;
+            padding:6px 12px; margin-top:6px; flex-wrap:wrap;
         }
         .audio-ready-dot {
             width:6px; height:6px; border-radius:9999px; background:#ef4444;
-            animation:pulse-ring .9s ease-out infinite;
+            animation:pulse-ring .9s ease-out infinite; flex-shrink:0;
+        }
+        .audio-preview {
+            flex:1; min-width:160px; height:28px; accent-color:#6366f1;
         }
         .audio-remove {
             margin-left:auto; font-size:.6875rem; color:#94a3b8; background:none;
             border:none; cursor:pointer; display:flex; align-items:center; gap:3px; font-family:inherit;
         }
         .audio-remove:hover { color:#ef4444; }
+        .rec-timer {
+            font-size:.72rem; color:#ef4444; font-variant-numeric:tabular-nums;
+            font-weight:600; min-width:36px;
+        }
 
         .input-hint {
             text-align:center; font-size:.625rem; color:#c4cdd8; margin-top:8px; letter-spacing:.01em;
@@ -656,21 +663,24 @@
     {{-- Input area --}}
     <div class="input-area">
         <div class="input-card">
-            {{-- Mic --}}
-            <button type="button" @click="toggleRecording" :disabled="loading"
-                    class="icon-btn btn-mic" :class="recording ? 'recording rec-pulse' : ''"
-                    :title="recording ? 'Detener grabación' : 'Grabar audio'">
-                <template x-if="!recording">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"/>
-                    </svg>
-                </template>
-                <template x-if="recording">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                        <path fill-rule="evenodd" d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z" clip-rule="evenodd"/>
-                    </svg>
-                </template>
-            </button>
+            {{-- Mic + timer --}}
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;">
+                <button type="button" @click="toggleRecording" :disabled="loading"
+                        class="icon-btn btn-mic" :class="recording ? 'recording rec-pulse' : ''"
+                        :title="recording ? 'Detener grabación' : 'Grabar audio'">
+                    <template x-if="!recording">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z"/>
+                        </svg>
+                    </template>
+                    <template x-if="recording">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z" clip-rule="evenodd"/>
+                        </svg>
+                    </template>
+                </button>
+                <span x-show="recording" class="rec-timer" x-text="Math.floor(recordingSeconds/60).toString().padStart(2,'0')+':'+( recordingSeconds%60).toString().padStart(2,'0')"></span>
+            </div>
 
             {{-- Textarea --}}
             <textarea x-model="text"
@@ -693,8 +703,9 @@
         {{-- Audio ready --}}
         <div x-show="audioBlob && !recording" x-transition class="audio-ready">
             <span class="audio-ready-dot"></span>
-            <span>Audio listo para enviar</span>
-            <button @click="audioBlob = null" class="audio-remove">
+            <audio x-bind:src="audioUrl" controls class="audio-preview" preload="metadata"></audio>
+            <span x-show="audioDuration > 0" style="font-size:.7rem;color:#94a3b8;" x-text="Math.floor(audioDuration/60).toString().padStart(2,'0')+':'+(Math.round(audioDuration)%60).toString().padStart(2,'0')"></span>
+            <button @click="clearAudio()" class="audio-remove">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:12px;height:12px;">
                     <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
                 </svg>
@@ -730,9 +741,14 @@ function chat() {
         error: null,
         recording: false,
         audioBlob: null,
+        audioUrl: null,
+        audioDuration: 0,
         audioMime: '',
         mediaRecorder: null,
         audioChunks: [],
+        recordingStart: null,
+        recordingSeconds: 0,
+        recordingTimer: null,
         showAnxiety: PLAN_FEATURES.emociones === true,
 
         showCamConsent: false,
@@ -882,7 +898,7 @@ function chat() {
             this.messages = [];
             this.text = '';
             this.error = null;
-            this.audioBlob = null;
+            this.clearAudio();
             this.init();
         },
 
@@ -893,15 +909,25 @@ function chat() {
             });
         },
 
+        clearAudio() {
+            if (this.audioUrl) { URL.revokeObjectURL(this.audioUrl); this.audioUrl = null; }
+            this.audioBlob = null;
+            this.audioDuration = 0;
+        },
+
         async toggleRecording() {
             if (this.recording) {
                 this.mediaRecorder.stop();
                 this.recording = false;
+                clearInterval(this.recordingTimer);
+                this.recordingTimer = null;
                 return;
             }
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 this.audioChunks = [];
+                this.recordingSeconds = 0;
+                this.recordingStart = Date.now();
 
                 const preferred = [
                     'audio/ogg;codecs=opus',
@@ -916,11 +942,18 @@ function chat() {
                 this.mediaRecorder.ondataavailable = e => this.audioChunks.push(e.data);
                 this.mediaRecorder.onstop = () => {
                     const mime = this.audioMime || 'audio/webm';
-                    this.audioBlob = new Blob(this.audioChunks, { type: mime });
+                    const blob = new Blob(this.audioChunks, { type: mime });
+                    this.audioDuration = (Date.now() - this.recordingStart) / 1000;
+                    if (this.audioUrl) URL.revokeObjectURL(this.audioUrl);
+                    this.audioUrl = URL.createObjectURL(blob);
+                    this.audioBlob = blob;
                     stream.getTracks().forEach(t => t.stop());
                 };
                 this.mediaRecorder.start();
                 this.recording = true;
+
+                // Contador de segundos visible
+                this.recordingTimer = setInterval(() => { this.recordingSeconds++; }, 1000);
             } catch {
                 this.error = 'No se pudo acceder al micrófono. Verifica los permisos.';
             }
@@ -934,11 +967,17 @@ function chat() {
             const currentEmotion = this.cameraActive ? this.facialEmotion : null;
             const currentEmotionKey = this.cameraActive ? this.facialEmotionKey : null;
             const currentConfidence = this.cameraActive ? this.facialConfidence : null;
+            const sentAudio = !!this.audioBlob;
+            const sentDuration = this.audioDuration;
 
             this.error = null;
+
+            // Índice del mensaje del usuario (para actualizarlo con la transcripción luego)
+            const userMsgIdx = this.messages.length;
             this.messages.push({
                 role: 'user',
-                text: textVal || '🎤 Audio enviado',
+                text: textVal || '🎤 Procesando audio…',
+                isAudio: sentAudio,
                 pct: null,
                 etiqueta: null,
                 facialEmotion: null,
@@ -954,6 +993,7 @@ function chat() {
                           : this.audioMime.includes('mp4') ? 'mp4'
                           : 'webm';
                 formData.append('audio', this.audioBlob, `recording.${ext}`);
+                if (sentDuration > 0) formData.append('duration_seconds', sentDuration.toFixed(2));
             }
 
             if (this.cameraActive) {
@@ -968,7 +1008,7 @@ function chat() {
             }
 
             this.text = '';
-            this.audioBlob = null;
+            this.clearAudio();
             this.loading = true;
             this.scrollBottom();
 
@@ -985,9 +1025,20 @@ function chat() {
 
                 if (!data.ok) {
                     this.error = data.error ?? 'Error al procesar la respuesta.';
+                    // Revertir placeholder de audio a indicador estático
+                    if (sentAudio && this.messages[userMsgIdx]) {
+                        this.messages[userMsgIdx].text = '🎤 Audio enviado';
+                    }
                 } else {
                     const pct = Math.round((data.probabilidad_ansiedad ?? 0) * 100);
                     const congruent = currentEmotionKey ? this.checkCongruence(pct) : null;
+
+                    // Si era audio y el servidor devolvió la transcripción, mostrarla
+                    if (sentAudio && data.texto && data.texto.trim() && this.messages[userMsgIdx]) {
+                        this.messages[userMsgIdx].text = '🎤 ' + data.texto.trim();
+                    } else if (sentAudio && this.messages[userMsgIdx]) {
+                        this.messages[userMsgIdx].text = '🎤 Audio enviado';
+                    }
 
                     this.messages.push({
                         role: 'mindra',
