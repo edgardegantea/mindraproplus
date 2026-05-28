@@ -82,9 +82,12 @@ find storage -type d -exec chmod 775 {} \;
 
 # 8. Cache for production
 echo "[8/8] Building production cache..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+# Leer APP_KEY del .env y pasarla explícitamente para evitar que variables de
+# sistema vacías (e.g. APP_KEY= en el entorno de Plesk) sobreescriban el .env.
+_APP_KEY=$(grep "^APP_KEY=" .env | cut -d'=' -f2-)
+APP_KEY="$_APP_KEY" php artisan config:cache
+APP_KEY="$_APP_KEY" php artisan route:cache
+APP_KEY="$_APP_KEY" php artisan view:cache
 
 echo ""
 echo "=== Deploy complete ==="
