@@ -368,7 +368,7 @@
                     @endforeach
                 </ul>
                 <div style="margin-top:auto;display:flex;flex-direction:column;gap:10px;">
-                    <a href="https://free.mindra.cafined.org" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="width:100%;justify-content:center;">
+                    <a href="https://app.mindra.cafined.org" target="_blank" rel="noopener noreferrer" class="btn-secondary" style="width:100%;justify-content:center;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:16px;height:16px;"><path fill-rule="evenodd" d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Zm7.876-2.326a.75.75 0 0 1 .75-.75h3.498a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0V5.31l-5.22 5.22a.75.75 0 1 1-1.06-1.06l5.22-5.22h-1.69a.75.75 0 0 1-.748-.576Z" clip-rule="evenodd"/></svg>
                         Versión Web
                     </a>
