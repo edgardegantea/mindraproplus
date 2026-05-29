@@ -38,7 +38,6 @@ class AnxietyInferenceService:
     def _load_model(self):
         """Carga el modelo entrenado y los procesadores"""
         try:
-            # Usar el mejor checkpoint disponible
             checkpoint_path = "modelo/anxiety-multimodal-epoch=00-val_auc=0.592.ckpt"
 
             if not os.path.exists(checkpoint_path):
@@ -55,10 +54,8 @@ class AnxietyInferenceService:
 
             print(f"Cargando modelo desde: {checkpoint_path}")
 
-            # Crear el modelo base
             base_model = AnxietyMultimodalModel(num_classes=1, dropout=0.4)
 
-            # Cargar el checkpoint con PyTorch Lightning
             self._model = AnxietyLightningModule.load_from_checkpoint(
                 checkpoint_path,
                 model=base_model,
@@ -68,7 +65,6 @@ class AnxietyInferenceService:
             self._model.eval()
             self._model.to(DEVICE)
 
-            # Cargar procesadores
             self._audio_processor = Wav2Vec2Processor.from_pretrained(
                 "facebook/wav2vec2-base", cache_dir=_CACHE_DIR)
             self._text_tokenizer = AutoTokenizer.from_pretrained(
@@ -151,7 +147,6 @@ class AnxietyInferenceService:
         try:
             final_text = (generated_text or text or "").strip()
 
-            # Si no hay modelo cargado, usar predicción dummy
             if self._model is None:
                 import random
                 prob = round(random.uniform(0.1, 0.9), 3)
@@ -194,7 +189,6 @@ class AnxietyInferenceService:
             return round(random.uniform(0.1, 0.9), 3)
 
 
-# Clase LightningModule para cargar checkpoints
 class AnxietyLightningModule(pl.LightningModule):
     def __init__(self, model, lr=1e-5):
         super().__init__()

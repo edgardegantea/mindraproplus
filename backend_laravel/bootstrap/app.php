@@ -4,6 +4,14 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
+// Recargar el .env en modo mutable para sobreescribir variables de sistema
+// vacías o incorrectas que Plesk inyecta en el entorno del proceso PHP
+// (e.g. APP_KEY="", DB_HOST="localhost"). Sin esto, Dotenv::createImmutable()
+// respeta los valores del sistema y los del .env son ignorados.
+if (file_exists($__envPath = dirname(__DIR__).'/.env')) {
+    \Dotenv\Dotenv::createMutable(dirname(__DIR__))->load();
+}
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
