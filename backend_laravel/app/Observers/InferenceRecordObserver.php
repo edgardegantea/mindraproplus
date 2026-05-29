@@ -32,39 +32,42 @@ class InferenceRecordObserver
             return;
         }
 
-        // ── Throttle: ¿hubo ya un CrisisEvent en las últimas 2 horas? ─────────
-        $throttled = CrisisEvent::where('user_id', $user->id)
-            ->where('created_at', '>=', now()->subHours(2))
-            ->exists();
+        // Envolver en try/catch para que una tabla faltante (pre-migración) o
+        // cualquier otro error NO revierta la transacción de InferenceRecord
+        // ni devuelva un 500 al usuario.
+        try {
+            // ── Throttle: ¿hubo ya un CrisisEvent en las últimas 2 horas? ─────
+            $throttled = CrisisEvent::where('user_id', $user->id)
+                ->where('created_at', '>=', now()->subHours(2))
+                ->exists();
 
-        // ── Decidir si enviar email ────────────────────────────────────────────
-        $emailSent = false;
+            // ── Decidir si enviar email ────────────────────────────────────────
+            $emailSent = false;
 
-        if (!$throttled) {
-            $features  = $user->features();
-            $wantsEmail = !empty($features['crisis_alerts']);
+            if (!$throttled) {
+                $features  = $user->features();
+                $wantsEmail = !empty($features['crisis_alerts']);
 
-            if ($wantsEmail) {
-                $prefs      = NotificationPreference::where('user_id', $user->id)->first();
-                $wantsEmail = $prefs ? (bool) $prefs->crisis_alerts : false;
-            }
+                if ($wantsEmail) {
+                    $prefs      = NotificationPreference::where('user_id', $user->id)->first();
+                    $wantsEmail = $prefs ? (bool) $prefs->crisis_alerts : false;
+                }
 
-            if ($wantsEmail) {
-                try {
-                    Mail::to($user->email)->queue(new CrisisAlertMail($user, $record));
-                    $emailSent = true;
-                } catch (\Throwable $e) {
-                    Log::warning('[Observer] CrisisAlertMail falló', [
-                        'user_id'   => $user->id,
-                        'record_id' => $record->id,
-                        'error'     => $e->getMessage(),
-                    ]);
+                if ($wantsEmail) {
+                    try {
+                        Mail::to($user->email)->queue(new CrisisAlertMail($user, $record));
+                        $emailSent = true;
+                    } catch (\Throwable $e) {
+                        Log::warning('[Observer] CrisisAlertMail falló', [
+                            'user_id'   => $user->id,
+                            'record_id' => $record->id,
+                            'error'     => $e->getMessage(),
+                        ]);
+                    }
                 }
             }
-        }
 
-        // ── Registrar el evento para auditoría (independiente de plan) ────────
-        try {
+            // ── Registrar el evento para auditoría (independiente de plan) ────
             CrisisEvent::create([
                 'user_id'             => $user->id,
                 'inference_record_id' => $record->id,
@@ -79,9 +82,10 @@ class InferenceRecordObserver
                 ],
             ]);
         } catch (\Throwable $e) {
-            Log::error('[Observer] CrisisEvent creation failed', [
-                'user_id' => $user->id,
-                'error'   => $e->getMessage(),
+            Log::error('[Observer] CrisisEvent handling failed', [
+                'user_id'   => $user->id,
+                'record_id' => $record->id,
+                'error'     => $e->getMessage(),
             ]);
         }
     }

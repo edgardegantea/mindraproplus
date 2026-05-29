@@ -30,19 +30,29 @@ class SuperAdminController extends Controller
 
         $avgProbability = InferenceRecord::whereNotNull('predicted_probability')->avg('predicted_probability');
 
+        // Nota: se usa DB::select() con SQL crudo en lugar del query builder
+        // porque MySQL ONLY_FULL_GROUP_BY rechaza GROUP BY con subqueries correlacionadas
+        // cuando se usan a través de DB::table(DB::raw(...)). PDO parametrizado es seguro.
         $now = Carbon::now()->toDateTimeString();
-        $planDistribution = DB::table(DB::raw('(SELECT COALESCE(
-                (SELECT p.slug FROM subscriptions s
-                 JOIN plans p ON p.id = s.plan_id
-                 WHERE s.user_id = users.id AND s.status = \'active\'
-                 AND (s.expires_at IS NULL OR s.expires_at >= ?)
-                 ORDER BY s.created_at DESC LIMIT 1),
-                \'free\'
-            ) as plan_slug FROM users) as user_plans'))
-            ->selectRaw('plan_slug, COUNT(*) as total')
-            ->setBindings([$now])
-            ->groupBy('plan_slug')
-            ->pluck('total', 'plan_slug');
+        $planDistributionRows = DB::select("
+            SELECT plan_slug, COUNT(*) AS total
+            FROM (
+                SELECT COALESCE(
+                    (SELECT p.slug
+                     FROM subscriptions s
+                     JOIN plans p ON p.id = s.plan_id
+                     WHERE s.user_id = users.id
+                       AND s.status = 'active'
+                       AND (s.expires_at IS NULL OR s.expires_at >= ?)
+                     ORDER BY s.created_at DESC
+                     LIMIT 1),
+                    'free'
+                ) AS plan_slug
+                FROM users
+            ) AS user_plans
+            GROUP BY plan_slug
+        ", [$now]);
+        $planDistribution = collect($planDistributionRows)->pluck('total', 'plan_slug');
 
         $dailyActivity = InferenceRecord::where('created_at', '>=', now()->subDays(29)->startOfDay())
             ->selectRaw('DATE(created_at) as date, COUNT(*) as total')
