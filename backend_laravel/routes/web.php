@@ -9,6 +9,8 @@ use App\Http\Controllers\Web\ContractController;
 use App\Http\Controllers\Web\TherapistShareViewController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\LegalController;
+use App\Http\Controllers\Web\AssessmentWebController;
+use App\Http\Controllers\Web\ProgramWebController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -59,6 +61,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/chat/send',      [ChatController::class, 'send'])->name('chat.send');
     Route::post('/chat/transcribe',[ChatController::class, 'transcribe'])->name('chat.transcribe');
     Route::post('/logout',   [AuthController::class, 'logout'])->name('logout');
+
+    // Evaluaciones clínicas (GAD-7 / PHQ-9)
+    Route::get('/evaluaciones',    [AssessmentWebController::class, 'index'])->name('assessments');
+    Route::post('/evaluaciones',   [AssessmentWebController::class, 'store'])->name('assessments.store');
+
+    // Programas de bienestar
+    Route::get('/programas',                                    [ProgramWebController::class, 'index'])->name('programs');
+    Route::post('/programas/{slug}/inscribir',                  [ProgramWebController::class, 'enroll'])->name('programs.enroll');
+    Route::post('/programas/{slug}/dia/{day}/completar',        [ProgramWebController::class, 'completeDay'])->name('programs.complete-day');
 });
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {

@@ -58,4 +58,28 @@ class Assessment extends Model
             default             => 'Desconocida',
         };
     }
+
+    public static function severityColor(string $severity): string
+    {
+        return match ($severity) {
+            'minimal'           => '#16a34a',
+            'mild'              => '#ca8a04',
+            'moderate'          => '#ea580c',
+            'moderately_severe' => '#dc2626',
+            'severe'            => '#7f1d1d',
+            default             => '#64748b',
+        };
+    }
+
+    public static function severityAdvice(string $severity): string
+    {
+        return match ($severity) {
+            'minimal'           => 'Tus niveles son bajos. ¡Sigue así!',
+            'mild'              => 'Hay algunos síntomas leves. El chat de Mindra puede ayudarte.',
+            'moderate'          => 'Los síntomas son moderados. Considera hablar con un profesional.',
+            'moderately_severe' => 'Los síntomas son significativos. Te recomendamos buscar apoyo profesional.',
+            'severe'            => 'Los síntomas son graves. Por favor busca atención profesional pronto.',
+            default             => '',
+        };
+    }
 }

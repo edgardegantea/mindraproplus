@@ -27,6 +27,16 @@
                     Historial
                 </a>
                 @auth
+                <a href="{{ route('assessments') }}"
+                   class="font-medium {{ request()->routeIs('assessments*') ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800' }} transition-colors">
+                    Evaluaciones
+                </a>
+                <a href="{{ route('programs') }}"
+                   class="font-medium {{ request()->routeIs('programs*') ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800' }} transition-colors">
+                    Programas
+                </a>
+                @endauth
+                @auth
                     @if (auth()->user()->isSuperAdmin())
                         <a href="{{ route('superadmin.dashboard') }}"
                            class="font-medium {{ request()->routeIs('superadmin.*') ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-800' }} transition-colors">

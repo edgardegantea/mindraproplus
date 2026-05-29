@@ -6,6 +6,7 @@ use App\Models\InferenceRecord;
 use App\Models\VisitorSession;
 use App\Models\Plan;
 use App\Services\AI\MindrabackClient;
+use App\Services\BotMemoryService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
@@ -13,10 +14,12 @@ use App\Models\User;
 class InferenceService
 {
     protected MindrabackClient $mindraback;
+    protected BotMemoryService $botMemory;
 
-    public function __construct(MindrabackClient $mindraback)
+    public function __construct(MindrabackClient $mindraback, BotMemoryService $botMemory)
     {
         $this->mindraback = $mindraback;
+        $this->botMemory  = $botMemory;
     }
 
     public function predict(?User $user = null, ?UploadedFile $audio = null, string $text = '', ?UploadedFile $image = null, ?float $durationSeconds = null, ?string $facialEmotion = null, ?float $facialConfidence = null): array
@@ -96,6 +99,15 @@ class InferenceService
                 ],
             ]);
 
+            // Enriquecer la respuesta del bot con contexto de memoria si el usuario está autenticado
+            $baseResponse = $result['bot_response'] ?? null;
+            $enhancedResponse = $baseResponse;
+            if ($user && $baseResponse) {
+                $prob    = $record->predicted_probability ?? 0;
+                $context = $this->botMemory->buildContext($user, $prob, $text);
+                $enhancedResponse = $this->botMemory->enhanceResponse($baseResponse, $context);
+            }
+
             return [
                 'ok' => true,
                 'record' => $record,
@@ -104,7 +116,7 @@ class InferenceService
                 'probabilidad_ansiedad' => $record->predicted_probability,
                 'emotion_label' => $record->emotion_label,
                 'emotion_probability' => $record->emotion_probability,
-                'bot_response' => $result['bot_response'] ?? null,
+                'bot_response' => $enhancedResponse,
                 'plan' => $plan->slug,
             ];
         });
