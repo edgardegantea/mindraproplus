@@ -14,9 +14,18 @@ class MindraColors {
   static const darkSurface = Color(0xFF131929); // Cards y paneles
   static const darkBorder  = Color(0xFF1E2A42); // Bordes sutiles
 
-  // Texto
-  static const textPrimary   = Color(0xFFE8EFFE); // Texto principal
-  static const textSecondary = Color(0xFF8A9BBF); // Texto secundario
+  // Fondo y superficies (light)
+  static const lightBg      = Color(0xFFF5F7FC); // Fondo principal claro
+  static const lightSurface = Color(0xFFFFFFFF); // Cards y paneles claros
+  static const lightBorder  = Color(0xFFE2E8F0); // Bordes sutiles claros
+
+  // Texto (dark)
+  static const textPrimary   = Color(0xFFE8EFFE); // Texto principal (dark)
+  static const textSecondary = Color(0xFF8A9BBF); // Texto secundario (dark)
+
+  // Texto (light)
+  static const textPrimaryLight   = Color(0xFF0F172A); // Texto principal (light)
+  static const textSecondaryLight = Color(0xFF64748B); // Texto secundario (light)
 
   // Semánticos
   static const success = Color(0xFF00D084); // Verde éxito
@@ -37,9 +46,139 @@ class MindraColors {
   );
 }
 
-// ─── Tema Mindra (dark) ───────────────────────────────────────────────────────
+// ─── Tema Mindra ─────────────────────────────────────────────────────────────
 class MindraTheme {
   MindraTheme._();
+
+  static ThemeData get light {
+    final base = ColorScheme.light(
+      primary:          MindraColors.blue,
+      onPrimary:        Colors.white,
+      secondary:        MindraColors.violet,
+      onSecondary:      Colors.white,
+      tertiary:         MindraColors.indigo,
+      onTertiary:       Colors.white,
+      surface:          MindraColors.lightSurface,
+      onSurface:        MindraColors.textPrimaryLight,
+      error:            MindraColors.error,
+      onError:          Colors.white,
+      outline:          MindraColors.lightBorder,
+      surfaceContainerHighest: MindraColors.lightBorder,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: base,
+      scaffoldBackgroundColor: MindraColors.lightBg,
+      brightness: Brightness.light,
+
+      appBarTheme: const AppBarTheme(
+        backgroundColor: MindraColors.lightBg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        foregroundColor: MindraColors.textPrimaryLight,
+        titleTextStyle: TextStyle(
+          color: MindraColors.textPrimaryLight,
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.3,
+        ),
+      ),
+
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: MindraColors.lightSurface,
+        indicatorColor: MindraColors.blue.withValues(alpha: 0.15),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: MindraColors.blue);
+          }
+          return const IconThemeData(color: MindraColors.textSecondaryLight);
+        }),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(color: MindraColors.blue, fontSize: 12, fontWeight: FontWeight.w600);
+          }
+          return const TextStyle(color: MindraColors.textSecondaryLight, fontSize: 12);
+        }),
+      ),
+
+      cardTheme: CardThemeData(
+        color: MindraColors.lightSurface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: MindraColors.lightBorder),
+        ),
+      ),
+
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: MindraColors.blue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+        ),
+      ),
+
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: MindraColors.blue,
+          side: const BorderSide(color: MindraColors.blue),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: MindraColors.blue),
+      ),
+
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: MindraColors.lightSurface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: MindraColors.lightBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: MindraColors.lightBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: MindraColors.blue, width: 2),
+        ),
+        labelStyle: const TextStyle(color: MindraColors.textSecondaryLight),
+        hintStyle: const TextStyle(color: MindraColors.textSecondaryLight),
+        prefixIconColor: MindraColors.textSecondaryLight,
+        suffixIconColor: MindraColors.textSecondaryLight,
+      ),
+
+      textTheme: const TextTheme(
+        displayLarge:  TextStyle(color: MindraColors.textPrimaryLight, fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(color: MindraColors.textPrimaryLight, fontWeight: FontWeight.bold),
+        headlineLarge: TextStyle(color: MindraColors.textPrimaryLight, fontWeight: FontWeight.bold),
+        headlineMedium:TextStyle(color: MindraColors.textPrimaryLight, fontWeight: FontWeight.w600),
+        titleLarge:    TextStyle(color: MindraColors.textPrimaryLight, fontWeight: FontWeight.w600),
+        titleMedium:   TextStyle(color: MindraColors.textPrimaryLight, fontWeight: FontWeight.w500),
+        bodyLarge:     TextStyle(color: MindraColors.textPrimaryLight),
+        bodyMedium:    TextStyle(color: MindraColors.textSecondaryLight),
+        labelLarge:    TextStyle(color: MindraColors.textPrimaryLight, fontWeight: FontWeight.w600),
+      ),
+
+      dividerTheme: const DividerThemeData(color: MindraColors.lightBorder, thickness: 1),
+
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: MindraColors.lightSurface,
+        contentTextStyle: const TextStyle(color: MindraColors.textPrimaryLight),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   static ThemeData get dark {
     final base = ColorScheme.dark(

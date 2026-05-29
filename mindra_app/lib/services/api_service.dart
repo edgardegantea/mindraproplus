@@ -373,6 +373,17 @@ class ApiService {
     return data['assessment'] as Map<String, dynamic>?;
   }
 
+  Future<List<Map<String, dynamic>>> getAssessmentHistory() async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/assessments'),
+      headers: _headers,
+    );
+    if (res.statusCode != 200) return [];
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    return List<Map<String, dynamic>>.from(
+        (data['assessments'] as List?) ?? []);
+  }
+
   // ── Racha ─────────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getStreak() async {

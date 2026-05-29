@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'theme/mindra_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/plan_provider.dart';
+import 'providers/theme_provider.dart';
 import 'services/api_service.dart';
 import 'services/storage_service.dart';
 import 'services/notification_service.dart';
@@ -35,6 +36,9 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => PlanProvider(api),
         ),
+        ChangeNotifierProvider(
+          create: (_) => ThemeProvider(storage)..init(),
+        ),
       ],
       child: const MindraApp(),
     ),
@@ -46,10 +50,13 @@ class MindraApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = context.watch<ThemeProvider>().mode;
     return MaterialApp(
       title: 'Mindra',
       debugShowCheckedModeBanner: false,
-      theme: MindraTheme.dark,
+      theme: MindraTheme.light,
+      darkTheme: MindraTheme.dark,
+      themeMode: themeMode,
       home: const _AppRouter(),
     );
   }
@@ -210,7 +217,7 @@ class _HomeTab extends StatelessWidget {
                   end: Alignment.bottomRight,
                   colors: [
                     planColor.withValues(alpha: 0.15),
-                    MindraColors.darkSurface,
+                    Theme.of(context).colorScheme.surface,
                   ],
                 ),
                 borderRadius: BorderRadius.circular(22),
@@ -270,7 +277,7 @@ class _HomeTab extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      MindraColors.darkSurface,
+                      Theme.of(context).colorScheme.surface,
                       MindraColors.violet.withValues(alpha: 0.22),
                     ],
                   ),
@@ -319,7 +326,7 @@ class _SosSheet {
   static void show(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: MindraColors.darkSurface,
+      backgroundColor: null,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => const _SosContent(),

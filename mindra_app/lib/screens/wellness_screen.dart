@@ -17,6 +17,7 @@ import 'mood_journal_screen.dart';
 import 'plans_screen.dart';
 import 'programs_screen.dart';
 import 'techniques_screen.dart';
+import 'weekly_report_screen.dart';
 
 class WellnessScreen extends StatefulWidget {
   const WellnessScreen({super.key});
@@ -442,7 +443,8 @@ class _HerramientasTabState extends State<_HerramientasTab> {
     (emoji: '📓', label: 'Diario',     desc: 'Registra tus emociones',    color: Color(0xFF4f46e5)),
     (emoji: '🗓️', label: 'Programas',  desc: 'Planes estructurados',      color: Color(0xFF0891b2)),
     (emoji: '📚', label: 'Biblioteca', desc: 'Guías y recursos',           color: Color(0xFF16a34a)),
-    (emoji: '🧠', label: 'Evaluación', desc: 'Test GAD-7',                 color: Color(0xFFdc2626)),
+    (emoji: '🧠', label: 'Evaluación', desc: 'Test GAD-7 y PHQ-9',        color: Color(0xFFdc2626)),
+    (emoji: '📊', label: 'Reporte',    desc: 'Resumen semanal',            color: Color(0xFF6366f1)),
     (emoji: '📜', label: 'Historial',  desc: 'Tus sesiones anteriores',    color: Color(0xFF64748b)),
     (emoji: '⭐', label: 'Planes',     desc: 'Gestiona tu suscripción',    color: Color(0xFFd97706)),
   ];
@@ -465,6 +467,7 @@ class _HerramientasTabState extends State<_HerramientasTab> {
       'Programas'  => MaterialPageRoute(builder: (_) => const ProgramsScreen()),
       'Biblioteca' => MaterialPageRoute(builder: (_) => const LibraryScreen()),
       'Evaluación' => MaterialPageRoute(builder: (_) => const AssessmentScreen()),
+      'Reporte'    => MaterialPageRoute(builder: (_) => const WeeklyReportScreen()),
       'Historial'  => MaterialPageRoute(builder: (_) => const HistoryScreen()),
       'Planes'     => MaterialPageRoute(builder: (_) => const PlansScreen()),
       _            => null,
@@ -488,9 +491,9 @@ class _HerramientasTabState extends State<_HerramientasTab> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: MindraColors.darkSurface,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: MindraColors.darkBorder),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: Row(children: [
                 Text(_streak > 0 ? '🔥' : '💤',
@@ -517,9 +520,9 @@ class _HerramientasTabState extends State<_HerramientasTab> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: MindraColors.darkSurface,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: MindraColors.darkBorder),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: _moodSaved
                   ? Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -793,7 +796,7 @@ class _CalendarTab extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: MindraColors.darkSurface,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
@@ -958,7 +961,7 @@ class _TrendsTab extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: pct,
                         minHeight: 8,
-                        backgroundColor: MindraColors.darkBorder,
+                        backgroundColor: Theme.of(context).dividerColor,
                         color: MindraColors.blue,
                       ),
                     ),

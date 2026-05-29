@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' show Consumer, ReadContext, WatchContext;
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/api_service.dart' show ApiService, ApiException;
 import '../services/notification_service.dart';
 import '../theme/mindra_theme.dart';
@@ -266,6 +267,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           const SizedBox(height: 24),
+
+          // ── Tema de la app ────────────────────────────────────────────────
+          Consumer<ThemeProvider>(
+            builder: (ctx, themeProvider, _) {
+              final isDark = themeProvider.isDark;
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: MindraColors.blue.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                    color: MindraColors.blue,
+                  ),
+                ),
+                title: const Text('Tema de la app'),
+                subtitle: Text(
+                  isDark ? 'Modo oscuro activo' : 'Modo claro activo',
+                  style: const TextStyle(fontSize: 12, color: MindraColors.textSecondary),
+                ),
+                trailing: Switch(
+                  value: isDark,
+                  activeThumbColor: MindraColors.blue,
+                  activeTrackColor: MindraColors.blue.withValues(alpha: 0.3),
+                  onChanged: (_) => themeProvider.toggle(),
+                ),
+              );
+            },
+          ),
+
           // ── Recordatorio diario (Pro/Plus) ────────────────────────────────
           if (plan != null && (plan.isPro || plan.isPlus))
             ListTile(

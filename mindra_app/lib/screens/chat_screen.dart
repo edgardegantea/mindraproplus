@@ -298,6 +298,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildBubble(_Msg msg) {
     final isUser = msg.isUser;
+    final cs = Theme.of(context).colorScheme;
     final bubble = Container(
       margin: EdgeInsets.only(
         top: 4, bottom: 4,
@@ -306,13 +307,16 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: isUser ? MindraColors.blue.withValues(alpha: 0.18) : MindraColors.darkSurface,
+        color: isUser
+            ? MindraColors.blue.withValues(alpha: 0.18)
+            : cs.surface,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(18),
           topRight: const Radius.circular(18),
           bottomLeft: Radius.circular(isUser ? 18 : 4),
           bottomRight: Radius.circular(isUser ? 4 : 18),
         ),
+        border: isUser ? null : Border.all(color: cs.outline.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -325,20 +329,23 @@ class _ChatScreenState extends State<ChatScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(msg.text, style: const TextStyle(fontSize: 15, height: 1.4)),
-          if (msg.etiqueta != null) ...[
+          // Anxiety probability bar (solo en respuestas de Mindra)
+          if (!isUser && msg.probAnsiedad != null) ...[
+            const SizedBox(height: 8),
+            _AnxietyBar(prob: msg.probAnsiedad!),
+          ],
+          // Etiqueta y emoción
+          if (!isUser && (msg.etiqueta != null || msg.emotionLabel != null)) ...[
             const SizedBox(height: 6),
-            _Chip(msg.etiqueta!, Colors.orange.shade700),
-          ],
-          if (msg.probAnsiedad != null) ...[
-            const SizedBox(height: 4),
-            _Chip(
-              'Ansiedad: ${(msg.probAnsiedad! * 100).toStringAsFixed(1)}%',
-              msg.probAnsiedad! > 0.5 ? Colors.red.shade600 : Colors.green.shade600,
-            ),
-          ],
-          if (msg.emotionLabel != null) ...[
-            const SizedBox(height: 4),
-            _Chip('Emoción: ${msg.emotionLabel!}', Colors.indigo),
+            Wrap(spacing: 6, runSpacing: 4, children: [
+              if (msg.etiqueta != null)
+                _Chip(msg.etiqueta!, Colors.orange.shade700),
+              if (msg.emotionLabel != null)
+                _Chip(
+                  '${_emotionEmoji(msg.emotionLabel!)} ${msg.emotionLabel!}',
+                  MindraColors.violet,
+                ),
+            ]),
           ],
         ],
       ),
@@ -348,6 +355,18 @@ class _ChatScreenState extends State<ChatScreen> {
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: bubble,
     );
+  }
+
+  static String _emotionEmoji(String emotion) {
+    final e = emotion.toLowerCase();
+    if (e.contains('feliz') || e.contains('alegr') || e.contains('joy')) return '😊';
+    if (e.contains('triste') || e.contains('sad'))    return '😢';
+    if (e.contains('enojo') || e.contains('anger') || e.contains('ira')) return '😠';
+    if (e.contains('miedo') || e.contains('fear') || e.contains('ansi')) return '😰';
+    if (e.contains('sorpr') || e.contains('surprise')) return '😮';
+    if (e.contains('disgust') || e.contains('asco')) return '😖';
+    if (e.contains('neutral')) return '😐';
+    return '💭';
   }
 
   Widget _buildInput() {
@@ -381,11 +400,11 @@ class _ChatScreenState extends State<ChatScreen> {
           Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
             decoration: BoxDecoration(
-              color: MindraColors.darkSurface,
-              border: const Border(top: BorderSide(color: MindraColors.darkBorder)),
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
+                  color: Colors.black.withValues(alpha: 0.10),
                   blurRadius: 8,
                   offset: const Offset(0, -2),
                 ),
@@ -423,16 +442,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     onSubmitted: (_) => _send(),
                     decoration: InputDecoration(
                       hintText: 'Escribe un mensaje…',
-                      hintStyle: const TextStyle(color: MindraColors.textSecondary),
                       filled: true,
-                      fillColor: MindraColors.dark,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(color: MindraColors.darkBorder),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        borderSide: const BorderSide(color: MindraColors.darkBorder),
+                        borderSide: BorderSide(color: Theme.of(context).dividerColor),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
@@ -559,6 +575,44 @@ class _TypingBubbleState extends State<_TypingBubble>
         ),
       ),
     );
+  }
+}
+
+// ─── Barra de ansiedad ────────────────────────────────────────────────────────
+
+class _AnxietyBar extends StatelessWidget {
+  final double prob;
+  const _AnxietyBar({required this.prob});
+
+  @override
+  Widget build(BuildContext context) {
+    final pct  = (prob * 100).round();
+    final color = prob > 0.65
+        ? const Color(0xFFef4444)
+        : prob > 0.45
+            ? const Color(0xFFf97316)
+            : const Color(0xFF22c55e);
+    final label = prob > 0.65 ? 'Alto' : prob > 0.45 ? 'Moderado' : 'Bajo';
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        const Text('Ansiedad detectada',
+            style: TextStyle(fontSize: 11, color: MindraColors.textSecondary)),
+        const Spacer(),
+        Text('$pct%  $label',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+      ]),
+      const SizedBox(height: 4),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(99),
+        child: LinearProgressIndicator(
+          value: prob.clamp(0.0, 1.0),
+          minHeight: 5,
+          backgroundColor: color.withValues(alpha: 0.15),
+          valueColor: AlwaysStoppedAnimation<Color>(color),
+        ),
+      ),
+    ]);
   }
 }
 
