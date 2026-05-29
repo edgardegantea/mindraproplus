@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -268,52 +269,133 @@ class _TrendBanner extends StatelessWidget {
   }
 }
 
-class _DailyChart extends StatelessWidget {
+class _DailyChart extends StatefulWidget {
   final List<Map<String, dynamic>> daily;
   const _DailyChart({required this.daily});
 
   @override
+  State<_DailyChart> createState() => _DailyChartState();
+}
+
+class _DailyChartState extends State<_DailyChart> {
+  int? _touchedIndex;
+
+  static Color _barColor(double prob) {
+    if (prob > 0.60) return const Color(0xFFef4444);
+    if (prob > 0.40) return const Color(0xFFf97316);
+    return const Color(0xFF22c55e);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final data = widget.daily;
+    if (data.isEmpty) return const SizedBox.shrink();
+
+    final bars = data.asMap().entries.map((e) {
+      final i    = e.key;
+      final d    = e.value;
+      final prob = (d['avg_anxiety'] as num?)?.toDouble() ?? 0.0;
+      final col  = _barColor(prob);
+      final touched = _touchedIndex == i;
+
+      return BarChartGroupData(
+        x: i,
+        barRods: [
+          BarChartRodData(
+            toY: (prob * 100).roundToDouble(),
+            color: touched ? col : col.withValues(alpha: 0.75),
+            width: touched ? 18 : 14,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              toY: 100,
+              color: col.withValues(alpha: 0.07),
+            ),
+          ),
+        ],
+      );
+    }).toList();
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
-      child: Column(
-        children: daily.map((d) {
-          final label = d['day_label'] as String? ?? '';
-          final prob  = (d['avg_anxiety'] as num?)?.toDouble() ?? 0.0;
-          final barColor = prob > 0.60
-              ? const Color(0xFFef4444)
-              : prob > 0.40
-                  ? const Color(0xFFf97316)
-                  : const Color(0xFF22c55e);
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(children: [
-              SizedBox(width: 28, child: Text(label,
-                  style: const TextStyle(fontSize: 11, color: MindraColors.textSecondary),
-                  textAlign: TextAlign.right)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: LinearProgressIndicator(
-                    value: prob.clamp(0.0, 1.0),
-                    minHeight: 8,
-                    backgroundColor: barColor.withValues(alpha: 0.12),
-                    valueColor: AlwaysStoppedAnimation<Color>(barColor),
+      child: SizedBox(
+        height: 180,
+        child: BarChart(
+          BarChartData(
+            maxY: 100,
+            barTouchData: BarTouchData(
+              touchTooltipData: BarTouchTooltipData(
+                getTooltipColor: (_) => MindraColors.darkSurface,
+                getTooltipItem: (group, _, rod, __) {
+                  final label = (data[group.x]['day_label'] as String?) ?? '';
+                  return BarTooltipItem(
+                    '$label\n${rod.toY.round()}%',
+                    const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
+                  );
+                },
+              ),
+              touchCallback: (event, response) {
+                setState(() {
+                  _touchedIndex = event is FlTapUpEvent
+                      ? null
+                      : response?.spot?.touchedBarGroupIndex;
+                });
+              },
+            ),
+            titlesData: FlTitlesData(
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (value, _) {
+                    final i = value.toInt();
+                    if (i < 0 || i >= data.length) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        (data[i]['day_label'] as String?) ?? '',
+                        style: const TextStyle(
+                            fontSize: 11, color: MindraColors.textSecondary),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 32,
+                  interval: 25,
+                  getTitlesWidget: (value, _) => Text(
+                    '${value.toInt()}%',
+                    style: const TextStyle(
+                        fontSize: 9, color: MindraColors.textSecondary),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              SizedBox(width: 32, child: Text('${(prob * 100).round()}%',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: barColor))),
-            ]),
-          );
-        }).toList(),
+              topTitles:   const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            ),
+            gridData: FlGridData(
+              show: true,
+              horizontalInterval: 25,
+              getDrawingHorizontalLine: (_) => FlLine(
+                color: Theme.of(context).dividerColor,
+                strokeWidth: 0.8,
+              ),
+              drawVerticalLine: false,
+            ),
+            borderData: FlBorderData(show: false),
+            barGroups: bars,
+          ),
+        ),
       ),
     );
   }

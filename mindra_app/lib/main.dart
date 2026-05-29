@@ -168,14 +168,17 @@ class _HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth     = context.watch<AuthProvider>();
-    final name     = auth.user?.name.split(' ').first ?? 'Amigo/a';
-    final plan     = auth.effectivePlan;
+    final auth      = context.watch<AuthProvider>();
+    final name      = auth.user?.name.split(' ').first ?? 'Amigo/a';
+    final plan      = auth.effectivePlan;
+    final isDark    = Theme.of(context).brightness == Brightness.dark;
     final planColor = plan?.isPlus == true
         ? MindraColors.indigo
         : plan?.isPro == true
             ? MindraColors.violet
             : MindraColors.blue;
+    // Versión accesible para texto/iconos (WCAG AA)
+    final planTextCol = MindraColors.planTextColor(planColor, isDark: isDark);
     final hour     = DateTime.now().hour;
     final greeting = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches';
 
@@ -237,7 +240,7 @@ class _HomeTab extends StatelessWidget {
                           style: const TextStyle(
                               fontSize: 28, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
-                      _PlanBadge(planName: plan?.name ?? 'Free', color: planColor),
+                      _PlanBadge(planName: plan?.name ?? 'Free', color: planColor, textColor: planTextCol),
                     ],
                   ),
                 ),
@@ -483,8 +486,9 @@ class _MindraLogoTitle extends StatelessWidget {
 
 class _PlanBadge extends StatelessWidget {
   final String planName;
-  final Color color;
-  const _PlanBadge({required this.planName, required this.color});
+  final Color  color;
+  final Color  textColor;
+  const _PlanBadge({required this.planName, required this.color, required this.textColor});
 
   @override
   Widget build(BuildContext context) {
@@ -498,10 +502,10 @@ class _PlanBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.workspace_premium, size: 14, color: color),
+          Icon(Icons.workspace_premium, size: 14, color: textColor),
           const SizedBox(width: 5),
           Text('Plan $planName',
-              style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+              style: TextStyle(color: textColor, fontWeight: FontWeight.w600)),
         ],
       ),
     );

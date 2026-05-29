@@ -443,6 +443,17 @@ class ApiService {
       throw ApiException(data['message'] as String? ?? 'Error al completar día');
     }
   }
+
+  /// GET /api/chat/history — conversaciones agrupadas por sesión
+  Future<List<Map<String, dynamic>>> getChatHistory({int page = 1}) async {
+    final res = await http.get(
+      Uri.parse('$_baseUrl/chat/history?page=$page&per_page=10'),
+      headers: _headers,
+    );
+    if (res.statusCode != 200) return [];
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
+    return List<Map<String, dynamic>>.from((data['sessions'] as List?) ?? []);
+  }
 }
 
 class ApiException implements Exception {

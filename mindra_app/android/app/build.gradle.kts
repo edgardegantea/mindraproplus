@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.mindra_app"
+    namespace = "org.cafined.mindra"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,23 +20,8 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
-    flavorDimensions += "device"
-    productFlavors {
-        create("phone") {
-            dimension = "device"
-            isDefault = true
-        }
-        create("wear") {
-            dimension = "device"
-            minSdk = 25
-        }
-    }
-
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.mindra_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "org.cafined.mindra"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -45,21 +30,9 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Signed with debug keys for now — replace with keystore for Play Store.
             signingConfig = signingConfigs.getByName("debug")
         }
-    }
-
-    applicationVariants.all {
-        val variant = this
-        variant.outputs
-            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-            .forEach { output ->
-                if (variant.buildType.name == "release") {
-                    output.outputFileName = "mindra-release.apk"
-                }
-            }
     }
 }
 

@@ -6,6 +6,8 @@ class InferenceResult {
   final double? emotionProbability;
   final String plan;
   final DateTime? createdAt;
+  /// true cuando el servidor ML no estaba disponible y se usó el fallback local.
+  final bool isFallback;
 
   const InferenceResult({
     required this.botResponse,
@@ -15,6 +17,7 @@ class InferenceResult {
     this.emotionProbability,
     required this.plan,
     this.createdAt,
+    this.isFallback = false,
   });
 
   factory InferenceResult.fromJson(Map<String, dynamic> json) {
@@ -33,6 +36,8 @@ class InferenceResult {
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
+      isFallback: json['fallback'] == true ||
+          json['model_name'] == 'fallback_mindra',
     );
   }
 }

@@ -16,6 +16,7 @@ import 'library_screen.dart';
 import 'mood_journal_screen.dart';
 import 'plans_screen.dart';
 import 'programs_screen.dart';
+import 'breathing_screen.dart';
 import 'techniques_screen.dart';
 import 'weekly_report_screen.dart';
 
@@ -439,14 +440,15 @@ class _HerramientasTabState extends State<_HerramientasTab> {
   }
 
   static const _tools = [
-    (emoji: '🧘', label: 'Técnicas',   desc: 'Respiración y mindfulness', color: Color(0xFF7c3aed)),
-    (emoji: '📓', label: 'Diario',     desc: 'Registra tus emociones',    color: Color(0xFF4f46e5)),
-    (emoji: '🗓️', label: 'Programas',  desc: 'Planes estructurados',      color: Color(0xFF0891b2)),
-    (emoji: '📚', label: 'Biblioteca', desc: 'Guías y recursos',           color: Color(0xFF16a34a)),
-    (emoji: '🧠', label: 'Evaluación', desc: 'Test GAD-7 y PHQ-9',        color: Color(0xFFdc2626)),
-    (emoji: '📊', label: 'Reporte',    desc: 'Resumen semanal',            color: Color(0xFF6366f1)),
-    (emoji: '📜', label: 'Historial',  desc: 'Tus sesiones anteriores',    color: Color(0xFF64748b)),
-    (emoji: '⭐', label: 'Planes',     desc: 'Gestiona tu suscripción',    color: Color(0xFFd97706)),
+    (emoji: '🌬️', label: 'Respiración', desc: 'Ejercicio guiado 4-4-6',    color: Color(0xFF0284c7)),
+    (emoji: '🧘', label: 'Técnicas',    desc: 'Mindfulness y relajación',   color: Color(0xFF7c3aed)),
+    (emoji: '📓', label: 'Diario',      desc: 'Registra tus emociones',     color: Color(0xFF4f46e5)),
+    (emoji: '🗓️', label: 'Programas',   desc: 'Planes estructurados',       color: Color(0xFF0891b2)),
+    (emoji: '📚', label: 'Biblioteca',  desc: 'Guías y recursos',            color: Color(0xFF16a34a)),
+    (emoji: '🧠', label: 'Evaluación',  desc: 'Test GAD-7 y PHQ-9',         color: Color(0xFFdc2626)),
+    (emoji: '📊', label: 'Reporte',     desc: 'Resumen semanal',             color: Color(0xFF6366f1)),
+    (emoji: '📜', label: 'Historial',   desc: 'Tus sesiones anteriores',     color: Color(0xFF64748b)),
+    (emoji: '⭐', label: 'Planes',      desc: 'Gestiona tu suscripción',     color: Color(0xFFd97706)),
   ];
 
   static const _tips = [
@@ -462,8 +464,9 @@ class _HerramientasTabState extends State<_HerramientasTab> {
 
   void _navigate(String label) {
     final route = switch (label) {
-      'Técnicas'   => MaterialPageRoute(builder: (_) => const TechniquesScreen()),
-      'Diario'     => MaterialPageRoute(builder: (_) => const MoodJournalScreen()),
+      'Respiración' => MaterialPageRoute(builder: (_) => const BreathingScreen()),
+      'Técnicas'    => MaterialPageRoute(builder: (_) => const TechniquesScreen()),
+      'Diario'      => MaterialPageRoute(builder: (_) => const MoodJournalScreen()),
       'Programas'  => MaterialPageRoute(builder: (_) => const ProgramsScreen()),
       'Biblioteca' => MaterialPageRoute(builder: (_) => const LibraryScreen()),
       'Evaluación' => MaterialPageRoute(builder: (_) => const AssessmentScreen()),

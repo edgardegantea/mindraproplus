@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -45,7 +46,18 @@ class NotificationService {
 
   Future<void> init() async {
     if (kIsWeb) return;
+
+    // Inicializar base de datos de zonas horarias
     tz.initializeTimeZones();
+
+    // Fijar la zona horaria local del dispositivo para que los recordatorios
+    // se programen en hora local y no en UTC (error común).
+    try {
+      final localTz = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(localTz.identifier));
+    } catch (_) {
+      // Fallback: mantener UTC si no se puede obtener la zona
+    }
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios     = DarwinInitializationSettings(
@@ -53,9 +65,16 @@ class NotificationService {
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
+
     await _plugin.initialize(
       const InitializationSettings(android: android, iOS: ios),
     );
+
+    // Solicitar permiso de notificaciones en Android 13+ (API 33)
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
   }
 
   /// Devuelve la hora configurada (-1 si está desactivada).
@@ -104,7 +123,9 @@ class NotificationService {
       msg.$2,
       scheduled,
       details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      // inexactAllowWhileIdle: el OS puede retrasar unos minutos pero funciona
+      // sin necesitar SCHEDULE_EXACT_ALARM en Android 12+.
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,

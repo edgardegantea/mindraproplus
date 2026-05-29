@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart' show Consumer, ReadContext, WatchContext;
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
@@ -33,6 +34,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _setReminder(int hour) async {
+    if (hour >= 0) {
+      // Solicitar permiso de notificaciones (Android 13+ / iOS)
+      final status = await Permission.notification.request();
+      if (!mounted) return;
+      if (status.isDenied || status.isPermanentlyDenied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+                'Activa los permisos de notificación en Ajustes para recibir recordatorios.'),
+            action: SnackBarAction(
+              label: 'Abrir',
+              onPressed: openAppSettings,
+            ),
+          ),
+        );
+        return;
+      }
+    }
     await context.read<NotificationService>().scheduleDaily(hour);
     if (mounted) setState(() => _reminderHour = hour);
   }
@@ -40,7 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showReminderPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: MindraColors.darkSurface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => Padding(
@@ -98,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final expires = data['expires_at'] as String? ?? '';
       showModalBottomSheet(
         context: ctx,
-        backgroundColor: MindraColors.darkSurface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         builder: (_) => Padding(
@@ -149,15 +168,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final user = auth.user;
-    final plan = auth.effectivePlan;
+    final auth     = context.watch<AuthProvider>();
+    final user     = auth.user;
+    final plan     = auth.effectivePlan;
     final planName = plan?.name ?? 'Free';
+    final isDark   = Theme.of(context).brightness == Brightness.dark;
+
+    // Color decorativo (fondos, bordes, iconos sobre su propio tint)
     final planColor = plan?.isPlus == true
         ? MindraColors.indigo
         : plan?.isPro == true
             ? MindraColors.violet
             : MindraColors.blue;
+    // Color accesible para texto/iconos sobre fondos del tema (WCAG AA)
+    final planTextCol = MindraColors.planTextColor(planColor, isDark: isDark);
 
     return Scaffold(
       appBar: AppBar(
@@ -177,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 end: Alignment.bottomRight,
                 colors: [
                   planColor.withValues(alpha: 0.14),
-                  MindraColors.darkSurface,
+                  Theme.of(context).colorScheme.surface,
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
@@ -188,7 +212,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 CircleAvatar(
                   radius: 38,
                   backgroundColor: planColor.withValues(alpha: 0.18),
-                  child: Icon(Icons.person, size: 44, color: planColor),
+                  child: Icon(Icons.person, size: 44, color: planTextCol),
                 ),
                 const SizedBox(height: 12),
                 if (user != null) ...[
@@ -197,8 +221,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 3),
                   Text(user.email,
-                      style: const TextStyle(
-                          color: MindraColors.textSecondary, fontSize: 13)),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          fontSize: 13)),
                 ],
               ],
             ),
@@ -212,14 +237,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               border: Border.all(color: planColor.withValues(alpha: 0.25)),
             ),
             child: Row(children: [
-              Icon(Icons.workspace_premium, color: planColor, size: 28),
+              Icon(Icons.workspace_premium, color: planTextCol, size: 28),
               const SizedBox(width: 14),
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('Plan actual',
-                    style: TextStyle(color: planColor, fontSize: 12)),
+                    style: TextStyle(color: planTextCol, fontSize: 12)),
                 Text(planName,
                     style: TextStyle(
-                        color: planColor,
+                        color: planTextCol,
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
               ]),
@@ -241,12 +266,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: planColor.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.description_outlined, color: planColor),
+              child: Icon(Icons.description_outlined, color: planTextCol),
             ),
             title: const Text('Ver contrato'),
             subtitle: Text('Términos del plan $planName',
-                style: const TextStyle(
-                    fontSize: 12, color: MindraColors.textSecondary)),
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
             trailing: const Icon(Icons.open_in_new, size: 16),
             onTap: () async {
               final slug = plan?.slug ?? 'free';
@@ -271,59 +297,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // ── Tema de la app ────────────────────────────────────────────────
           Consumer<ThemeProvider>(
             builder: (ctx, themeProvider, _) {
-              final isDark = themeProvider.isDark;
+              final themeIsDark = themeProvider.isDark;
+              final accentCol   = MindraColors.planTextColor(MindraColors.blue, isDark: themeIsDark);
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: MindraColors.blue.withValues(alpha: 0.12),
+                    color: accentCol.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    isDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
-                    color: MindraColors.blue,
+                    themeIsDark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                    color: accentCol,
                   ),
                 ),
                 title: const Text('Tema de la app'),
                 subtitle: Text(
-                  isDark ? 'Modo oscuro activo' : 'Modo claro activo',
-                  style: const TextStyle(fontSize: 12, color: MindraColors.textSecondary),
+                  themeIsDark ? 'Modo oscuro activo' : 'Modo claro activo',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
                 trailing: Switch(
-                  value: isDark,
-                  activeThumbColor: MindraColors.blue,
-                  activeTrackColor: MindraColors.blue.withValues(alpha: 0.3),
+                  value: themeIsDark,
+                  activeThumbColor: accentCol,
+                  activeTrackColor: accentCol.withValues(alpha: 0.3),
                   onChanged: (_) => themeProvider.toggle(),
                 ),
               );
             },
           ),
 
-          // ── Recordatorio diario (Pro/Plus) ────────────────────────────────
-          if (plan != null && (plan.isPro || plan.isPlus))
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: MindraColors.blue.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.notifications_outlined,
-                    color: MindraColors.blue),
+          // ── Recordatorio diario ───────────────────────────────────────────
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: MindraColors.blue.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
               ),
-              title: const Text('Recordatorio diario'),
-              subtitle: Text(
-                _reminderHour >= 0
-                    ? 'Activado a las ${_reminderHour.toString().padLeft(2, '0')}:00'
-                    : 'Desactivado',
-                style: const TextStyle(
-                    fontSize: 12, color: MindraColors.textSecondary),
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _showReminderPicker,
+              child: const Icon(Icons.notifications_outlined,
+                  color: MindraColors.blue),
             ),
+            title: const Text('Recordatorio diario'),
+            subtitle: Text(
+              _reminderHour >= 0
+                  ? 'Activado a las ${_reminderHour.toString().padLeft(2, '0')}:00'
+                  : 'Desactivado',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55)),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _showReminderPicker,
+          ),
           const SizedBox(height: 16),
 
           // ── Evaluación GAD-7 ──────────────────────────────────────────

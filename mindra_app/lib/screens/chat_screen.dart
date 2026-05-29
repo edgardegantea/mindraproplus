@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io' show Platform;
 import 'dart:math' show Random;
 import 'package:camera/camera.dart';
@@ -8,6 +9,7 @@ import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cross_file/cross_file.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../models/inference_result.dart';
@@ -19,11 +21,12 @@ bool get _needsMobilePermission =>
     !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
 class _Msg {
-  final String text;
-  final bool isUser;
+  final String  text;
+  final bool    isUser;
   final String? etiqueta;
   final double? probAnsiedad;
   final String? emotionLabel;
+  final bool    isFallback;
 
   const _Msg({
     required this.text,
@@ -31,7 +34,26 @@ class _Msg {
     this.etiqueta,
     this.probAnsiedad,
     this.emotionLabel,
+    this.isFallback = false,
   });
+
+  Map<String, dynamic> toJson() => {
+    'text':         text,
+    'isUser':       isUser,
+    'etiqueta':     etiqueta,
+    'probAnsiedad': probAnsiedad,
+    'emotionLabel': emotionLabel,
+    'isFallback':   isFallback,
+  };
+
+  factory _Msg.fromJson(Map<String, dynamic> j) => _Msg(
+    text:         j['text']         as String,
+    isUser:       j['isUser']       as bool,
+    etiqueta:     j['etiqueta']     as String?,
+    probAnsiedad: (j['probAnsiedad'] as num?)?.toDouble(),
+    emotionLabel: j['emotionLabel'] as String?,
+    isFallback:   j['isFallback']   as bool? ?? false,
+  );
 }
 
 class ChatScreen extends StatefulWidget {
@@ -42,24 +64,93 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _textCtrl = TextEditingController();
+  final _textCtrl  = TextEditingController();
   final _scrollCtrl = ScrollController();
-  final _recorder = AudioRecorder();
+  final _recorder  = AudioRecorder();
   final List<_Msg> _messages = [];
   bool _isRecording = false;
-  bool _sending = false;
-  XFile? _pendingImage; // imagen facial capturada, pendiente de enviar
+  bool _sending     = false;
+  XFile? _pendingImage;
+
+  static const _kStorageKey = 'chat_history_v1';
+  static const _kMaxStored  = 60; // máximo de mensajes a persistir
 
   @override
   void initState() {
     super.initState();
+    _loadHistory();
+  }
+
+  /// Carga el historial guardado; si está vacío muestra el saludo inicial.
+  Future<void> _loadHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw   = prefs.getString(_kStorageKey);
+      if (raw != null && raw.isNotEmpty) {
+        final list = (jsonDecode(raw) as List)
+            .map((e) => _Msg.fromJson(e as Map<String, dynamic>))
+            .toList();
+        if (mounted && list.isNotEmpty) {
+          setState(() => _messages.addAll(list));
+          _scrollToBottom();
+          return;
+        }
+      }
+    } catch (_) {}
+    // Sin historial: mensaje de bienvenida
     final name = context.read<AuthProvider>().user?.name ?? '';
-    _messages.add(_Msg(
-      text: name.isNotEmpty
-          ? 'Hola $name, estoy aquí para escucharte. ¿Cómo te sientes hoy?'
-          : 'Hola, estoy aquí para escucharte. ¿Cómo te sientes hoy?',
-      isUser: false,
-    ));
+    if (mounted) {
+      setState(() => _messages.add(_Msg(
+        text: name.isNotEmpty
+            ? 'Hola $name, estoy aquí para escucharte. ¿Cómo te sientes hoy?'
+            : 'Hola, estoy aquí para escucharte. ¿Cómo te sientes hoy?',
+        isUser: false,
+      )));
+    }
+  }
+
+  /// Persiste los últimos [_kMaxStored] mensajes en SharedPreferences.
+  Future<void> _saveHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final toSave = _messages.length > _kMaxStored
+          ? _messages.sublist(_messages.length - _kMaxStored)
+          : _messages;
+      await prefs.setString(_kStorageKey, jsonEncode(toSave.map((m) => m.toJson()).toList()));
+    } catch (_) {}
+  }
+
+  /// Borra el historial local y reinicia la conversación.
+  Future<void> _clearHistory() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Limpiar conversación'),
+        content: const Text('¿Quieres borrar el historial de esta sesión?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Borrar',
+                  style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kStorageKey);
+    final name = context.read<AuthProvider>().user?.name ?? '';
+    setState(() {
+      _messages.clear();
+      _messages.add(_Msg(
+        text: name.isNotEmpty
+            ? 'Hola $name, estoy aquí para escucharte. ¿Cómo te sientes hoy?'
+            : 'Hola, estoy aquí para escucharte. ¿Cómo te sientes hoy?',
+        isUser: false,
+      ));
+    });
   }
 
   @override
@@ -205,6 +296,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _sending = true;
       _pendingImage = null;
     });
+    _saveHistory();
     _scrollToBottom();
 
     final api = context.read<ApiService>();
@@ -242,9 +334,11 @@ class _ChatScreenState extends State<ChatScreen> {
           etiqueta: showEmotions ? result.etiqueta : null,
           probAnsiedad: showEmotions ? result.probabilidadAnsiedad : null,
           emotionLabel: showEmotions ? result.emotionLabel : null,
+          isFallback: result.isFallback,
         ));
         _sending = false;
       });
+      _saveHistory();
     } catch (e) {
       setState(() {
         _messages.add(_Msg(
@@ -253,6 +347,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ));
         _sending = false;
       });
+      _saveHistory();
     }
     _scrollToBottom();
   }
@@ -272,6 +367,13 @@ class _ChatScreenState extends State<ChatScreen> {
             const Text('Mindra'),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep_outlined),
+            tooltip: 'Limpiar conversación',
+            onPressed: _clearHistory,
+          ),
+        ],
       ),
       body: WebFrame(
         child: Column(
@@ -345,6 +447,23 @@ class _ChatScreenState extends State<ChatScreen> {
                   '${_emotionEmoji(msg.emotionLabel!)} ${msg.emotionLabel!}',
                   MindraColors.violet,
                 ),
+            ]),
+          ],
+          // Indicador de modo fallback (análisis de IA no disponible)
+          if (!isUser && msg.isFallback) ...[
+            const SizedBox(height: 6),
+            Row(children: [
+              Icon(Icons.cloud_off_outlined,
+                  size: 11,
+                  color: Colors.amber.shade600),
+              const SizedBox(width: 4),
+              Text(
+                'Modo sin conexión — respuesta preestablecida',
+                style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.amber.shade600,
+                    fontStyle: FontStyle.italic),
+              ),
             ]),
           ],
         ],

@@ -4,35 +4,43 @@ import 'package:flutter/material.dart';
 class MindraColors {
   MindraColors._();
 
-  // Primarios
+  // ── Primarios (uso decorativo: gradientes, fondos tintados, iconos sobre fondo oscuro)
   static const blue    = Color(0xFF00A0F0); // Azul eléctrico del logo
   static const violet  = Color(0xFF7C3CC8); // Violeta del logo
   static const indigo  = Color(0xFF3C14B4); // Índigo del logo
 
-  // Fondo y superficies (dark)
+  // ── Variantes accesibles WCAG AA para texto ───────────────────────────────
+  // blueOnLight   : blue oscurecido → 5.5:1 sobre lightBg (#F5F7FC)
+  // violetOnDark  : violet aclarado → 7.3:1 sobre darkSurface (#131929)
+  // indigoOnDark  : indigo aclarado → 6.3:1 sobre darkSurface (#131929)
+  static const blueOnLight  = Color(0xFF005FA3);
+  static const violetOnDark = Color(0xFFBB9EF5);
+  static const indigoOnDark = Color(0xFF9896F1);
+
+  // ── Fondo y superficies (dark)
   static const dark        = Color(0xFF0A0F1C); // Fondo principal
   static const darkSurface = Color(0xFF131929); // Cards y paneles
   static const darkBorder  = Color(0xFF1E2A42); // Bordes sutiles
 
-  // Fondo y superficies (light)
+  // ── Fondo y superficies (light)
   static const lightBg      = Color(0xFFF5F7FC); // Fondo principal claro
   static const lightSurface = Color(0xFFFFFFFF); // Cards y paneles claros
   static const lightBorder  = Color(0xFFE2E8F0); // Bordes sutiles claros
 
-  // Texto (dark)
-  static const textPrimary   = Color(0xFFE8EFFE); // Texto principal (dark)
-  static const textSecondary = Color(0xFF8A9BBF); // Texto secundario (dark)
+  // ── Texto (dark)
+  static const textPrimary   = Color(0xFFE8EFFE); // 14:1 sobre dark    ✓ AA
+  static const textSecondary = Color(0xFF8A9BBF); //  6:1 sobre dark     ✓ AA
 
-  // Texto (light)
-  static const textPrimaryLight   = Color(0xFF0F172A); // Texto principal (light)
-  static const textSecondaryLight = Color(0xFF64748B); // Texto secundario (light)
+  // ── Texto (light)
+  static const textPrimaryLight   = Color(0xFF0F172A); // 17:1 sobre lightBg ✓ AA
+  static const textSecondaryLight = Color(0xFF475569); //  6.3:1 sobre lightBg ✓ AA (mejorado de #64748B)
 
-  // Semánticos
-  static const success = Color(0xFF00D084); // Verde éxito
-  static const warning = Color(0xFFFFB038); // Naranja advertencia
-  static const error   = Color(0xFFFF4D6A); // Rojo error
+  // ── Semánticos
+  static const success = Color(0xFF00D084);
+  static const warning = Color(0xFFFFB038);
+  static const error   = Color(0xFFFF4D6A);
 
-  // Gradientes del logo
+  // ── Gradientes del logo
   static const gradientMain = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -44,6 +52,20 @@ class MindraColors {
     end: Alignment.bottomRight,
     colors: [violet, indigo],
   );
+
+  // ── Helper: color de texto accesible para un color de plan dado el tema ──
+  /// Devuelve la variante del color que cumple WCAG AA (4.5:1) sobre el
+  /// fondo del tema actual. Usar para texto/iconos, no para decoraciones.
+  static Color planTextColor(Color planColor, {required bool isDark}) {
+    if (isDark) {
+      if (planColor == indigo) return indigoOnDark;
+      if (planColor == violet) return violetOnDark;
+      return blue; // blue sobre dark: 5.8:1 ✓
+    } else {
+      if (planColor == blue) return blueOnLight;
+      return planColor; // violet (5.7:1) e indigo (9.8:1) pasan en light ✓
+    }
+  }
 }
 
 // ─── Tema Mindra ─────────────────────────────────────────────────────────────
@@ -52,11 +74,11 @@ class MindraTheme {
 
   static ThemeData get light {
     final base = ColorScheme.light(
-      primary:          MindraColors.blue,
+      primary:          MindraColors.blueOnLight,  // 5.5:1 sobre lightBg ✓
       onPrimary:        Colors.white,
-      secondary:        MindraColors.violet,
+      secondary:        MindraColors.violet,        // 5.7:1 sobre white ✓
       onSecondary:      Colors.white,
-      tertiary:         MindraColors.indigo,
+      tertiary:         MindraColors.indigo,        // 9.8:1 sobre white ✓
       onTertiary:       Colors.white,
       surface:          MindraColors.lightSurface,
       onSurface:        MindraColors.textPrimaryLight,
@@ -115,7 +137,7 @@ class MindraTheme {
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: MindraColors.blue,
+          backgroundColor: MindraColors.blueOnLight,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -125,15 +147,15 @@ class MindraTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: MindraColors.blue,
-          side: const BorderSide(color: MindraColors.blue),
+          foregroundColor: MindraColors.blueOnLight,
+          side: const BorderSide(color: MindraColors.blueOnLight),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
 
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: MindraColors.blue),
+        style: TextButton.styleFrom(foregroundColor: MindraColors.blueOnLight),
       ),
 
       inputDecorationTheme: InputDecorationTheme(
