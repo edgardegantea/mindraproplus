@@ -37,7 +37,7 @@ class SubscriptionService
             ->where('status', 'active')
             ->update(['status' => 'replaced']);
 
-        return Subscription::create([
+        $subscription = Subscription::create([
             'user_id'    => $user->id,
             'plan_id'    => $plan->id,
             'status'     => 'active',
@@ -45,6 +45,11 @@ class SubscriptionService
             'started_at' => Carbon::now(),
             'expires_at' => $expiresAt,
         ]);
+
+        // Invalidar caché del plan para que el próximo request refleje el cambio
+        $user->forgetPlanCache();
+
+        return $subscription;
     }
 
     public function getActiveSubscription(User $user): ?Subscription
@@ -117,6 +122,8 @@ class SubscriptionService
         // Email de confirmación al usuario (en cola para no bloquear el webhook)
         try {
             $user = $order->user;
+            // Invalidar caché del plan activo
+            $user?->forgetPlanCache();
             if ($user) {
                 Mail::to($user->email)->queue(new PlanActivatedMail(
                     user:     $user,

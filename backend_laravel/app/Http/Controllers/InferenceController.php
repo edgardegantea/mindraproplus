@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InferenceRequest;
-use App\Mail\CrisisAlertMail;
 use App\Mail\PlusRequestMail;
-use App\Models\CrisisEvent;
 use App\Models\ProOrder;
 use App\Services\InferenceService;
 use App\Models\InferenceRecord;
@@ -39,48 +37,9 @@ class InferenceController extends Controller
             return response()->json(['ok' => false, 'error' => $result['error']], 400);
         }
 
-        // ── Crisis detection: loguear y enviar email si ansiedad > 75% ───────
-        $prob = $result['probabilidad_ansiedad'] ?? 0;
-        if ($prob > 0.75 && $user && isset($result['record'])) {
-            $this->handleCrisisEvent($user, $result['record'], $prob, $result['etiqueta'] ?? '');
-        }
+        // Crisis detection delegada al InferenceRecordObserver (única fuente de verdad).
 
         return response()->json($result);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Registra un evento de crisis y envía email si el usuario tiene alertas
-    // ─────────────────────────────────────────────────────────────────────────
-    protected function handleCrisisEvent($user, InferenceRecord $record, float $prob, string $label): void
-    {
-        try {
-            $emailSent = false;
-
-            // Verificar preferencia del usuario para alertas de crisis
-            $pref = $user->notificationPreference;
-            $wantsEmail = $pref ? $pref->crisis_alerts : false;
-
-            if ($wantsEmail) {
-                Mail::to($user->email)->send(new CrisisAlertMail($user, $record));
-                $emailSent = true;
-            }
-
-            CrisisEvent::create([
-                'user_id'             => $user->id,
-                'inference_record_id' => $record->id,
-                'probability'         => $prob,
-                'predicted_label'     => $label,
-                'email_sent'          => $emailSent,
-                'email_sent_at'       => $emailSent ? now() : null,
-                'notes'               => [
-                    'ip'         => request()->ip(),
-                    'user_agent' => request()->userAgent(),
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            // No interrumpir la respuesta al usuario si el log de crisis falla
-            Log::error('CrisisEvent log failed: ' . $e->getMessage());
-        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -160,8 +119,103 @@ class InferenceController extends Controller
     }
 
     /**
+     * GET /api/chat/history
+     *
+     * Devuelve las últimas conversaciones del usuario agrupadas por sesión,
+     * con los mensajes de cada sesión en orden cronológico.
+     *
+     * Query params:
+     *   page     (int) — página (default 1)
+     *   per_page (int) — sesiones por página, 1-20 (default 10)
+     *
+     * Responde:
+     *  {
+     *    ok: true,
+     *    sessions: [
+     *      {
+     *        session_id: 42,
+     *        date:       "2026-05-28",
+     *        messages:   [
+     *          { role: "user",      text: "...", created_at: "..." },
+     *          { role: "assistant", text: "...", etiqueta: "...",
+     *            prob: 0.53, emotion: "neutral", created_at: "..." }
+     *        ]
+     *      },
+     *      ...
+     *    ],
+     *    pagination: { current_page, last_page, per_page, total }
+     *  }
+     */
+    public function chatHistory(Request $request)
+    {
+        $user    = $request->user();
+        $perPage = max(1, min((int) $request->input('per_page', 10), 20));
+
+        // Sesiones del usuario, ordenadas por más reciente
+        $sessionsPaginated = DB::table('visitor_sessions')
+            ->where('user_id', $user->id)
+            ->orderByDesc('updated_at')
+            ->paginate($perPage, ['id', 'created_at', 'updated_at']);
+
+        $sessionIds = collect($sessionsPaginated->items())->pluck('id');
+
+        // Todos los registros de esas sesiones en una sola query
+        $records = InferenceRecord::whereIn('visitor_session_id', $sessionIds)
+            ->orderBy('created_at')
+            ->get(['id', 'visitor_session_id', 'input_text', 'notes',
+                   'predicted_label', 'predicted_probability',
+                   'emotion_label', 'created_at']);
+
+        $bySession = $records->groupBy('visitor_session_id');
+
+        $sessions = collect($sessionsPaginated->items())->map(function ($s) use ($bySession) {
+            $msgs = [];
+            foreach ($bySession->get($s->id, collect()) as $rec) {
+                // Mensaje del usuario
+                if (!empty($rec->input_text)) {
+                    $msgs[] = [
+                        'role'       => 'user',
+                        'text'       => $rec->input_text,
+                        'created_at' => $rec->created_at,
+                    ];
+                }
+                // Respuesta del asistente
+                $notes    = is_array($rec->notes) ? $rec->notes : json_decode($rec->notes ?? '{}', true);
+                $botText  = $notes['bot_response'] ?? null;
+                if ($botText) {
+                    $msgs[] = [
+                        'role'       => 'assistant',
+                        'text'       => $botText,
+                        'etiqueta'   => $rec->predicted_label,
+                        'prob'       => $rec->predicted_probability,
+                        'emotion'    => $rec->emotion_label,
+                        'created_at' => $rec->created_at,
+                    ];
+                }
+            }
+
+            return [
+                'session_id' => $s->id,
+                'date'       => \Illuminate\Support\Carbon::parse($s->created_at)->toDateString(),
+                'messages'   => $msgs,
+            ];
+        })->filter(fn($s) => count($s['messages']) > 0)->values();
+
+        return response()->json([
+            'ok'         => true,
+            'sessions'   => $sessions,
+            'pagination' => [
+                'current_page' => $sessionsPaginated->currentPage(),
+                'last_page'    => $sessionsPaginated->lastPage(),
+                'per_page'     => $sessionsPaginated->perPage(),
+                'total'        => $sessionsPaginated->total(),
+            ],
+        ]);
+    }
+
+    /**
      * Calendario de bienestar: ansiedad promedio agrupada por día (últimos 60 días).
-     * Responde: { ok, calendar: [ { date: "2026-05-01", avg_anxiety: 0.42, count: 3 }, ... ] }
+     * Responde: { ok, calendar: [ { date: "2026-05-28", avg_anxiety: 0.42, count: 3 }, ... ] }
      */
     public function calendar(Request $request)
     {
@@ -347,10 +401,10 @@ class InferenceController extends Controller
             ]);
         }
 
-        // Email de confirmación al solicitante (con CC al admin)
+        // Email de confirmación al solicitante — en cola para no bloquear la respuesta
         try {
             Mail::to($validated['requester_email'])
-                ->send(new PlusRequestMail($data, 'confirmation'));
+                ->queue(new PlusRequestMail($data, 'confirmation'));
         } catch (\Throwable $e) {
             Log::warning('Email confirmación Plus (app) falló', ['error' => $e->getMessage()]);
         }

@@ -50,8 +50,9 @@ Route::middleware('throttle:10,1')->group(function () {
 Route::get('/plans',        [PlanController::class, 'index']);
 Route::get('/plans/{plan}', [PlanController::class, 'show']);
 
-// ── Inferencia: pública con throttle ─────────────────────────────────────────
-Route::middleware('throttle:30,1')->group(function () {
+// ── Inferencia: throttle inteligente por plan ─────────────────────────────────
+// Free: 20/hora · Pro: 100/hora · Plus: ilimitado · Anónimo: 10/hora
+Route::middleware('throttle:predict')->group(function () {
     Route::post('/inference/predict',    [InferenceController::class, 'predict']);
     Route::post('/inference/transcribe', [InferenceController::class, 'transcribe']);
 });
@@ -74,6 +75,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Suscripciones
     Route::get('/subscriptions/current',   [SubscriptionController::class, 'current']);
     Route::post('/subscriptions',          [SubscriptionController::class, 'subscribe']);
+
+    // Historial de chat agrupado por sesión
+    Route::get('/chat/history',            [InferenceController::class, 'chatHistory'])
+         ->middleware('feature:historial');
 
     // Inferencias con feature-gate
     Route::get('/inference/history',       [InferenceController::class, 'history'])

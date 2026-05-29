@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -150,16 +151,34 @@ class User extends Authenticatable
 
     // --- Plan helpers ---
 
+    /**
+     * Plan activo del usuario.
+     *
+     * Cacheado 5 minutos por user_id para evitar un DB hit en cada request
+     * autenticado. Se invalida en SubscriptionService cuando cambia la suscripción.
+     * Clave: "user_plan:{id}"
+     */
     public function activePlan(): ?Plan
     {
-        return $this->subscriptions()
-            ->where('status', 'active')
-            ->where(function ($q) {
-                $q->whereNull('expires_at')
-                  ->orWhere('expires_at', '>=', now());
-            })
-            ->latest('expires_at')
-            ->first()?->plan;
+        return Cache::remember("user_plan:{$this->id}", 300, function () {
+            return $this->subscriptions()
+                ->where('status', 'active')
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')
+                      ->orWhere('expires_at', '>=', now());
+                })
+                ->latest('expires_at')
+                ->first()?->plan;
+        });
+    }
+
+    /**
+     * Invalida la caché del plan activo de este usuario.
+     * Llamar desde SubscriptionService después de crear/activar una suscripción.
+     */
+    public function forgetPlanCache(): void
+    {
+        Cache::forget("user_plan:{$this->id}");
     }
 
     /**

@@ -2,13 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Mail\WeeklyReportMail;
+use App\Jobs\SendWeeklyReportJob;
 use App\Models\InferenceRecord;
 use App\Models\ProgramEnrollment;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Mail;
 
 class SendWeeklyReports extends Command
 {
@@ -46,17 +45,13 @@ class SendWeeklyReports extends Command
                 continue;
             }
 
-            try {
-                Mail::to($user->email)->send(new WeeklyReportMail($user, $stats));
-                $sent++;
-                $this->line("  ✓ {$user->email}");
-            } catch (\Exception $e) {
-                $skipped++;
-                $this->warn("  ✗ {$user->email}: " . $e->getMessage());
-            }
+            // Despacha el job a la cola (async, con reintentos automáticos)
+            SendWeeklyReportJob::dispatch($user, $stats);
+            $sent++;
+            $this->line("  ✓ {$user->email} → encolado");
         }
 
-        $this->info("Listo. Enviados: {$sent} | Errores: {$skipped}");
+        $this->info("Listo. Jobs encolados: {$sent} | Omitidos: {$skipped}");
 
         return self::SUCCESS;
     }
