@@ -207,6 +207,16 @@ class User extends Authenticatable
         });
     }
 
+    public function notificationPreference()
+    {
+        return $this->hasOne(\App\Models\NotificationPreference::class);
+    }
+
+    public function crisisEvents()
+    {
+        return $this->hasMany(\App\Models\CrisisEvent::class);
+    }
+
     /**
      * Datos seguros para exponer en respuestas API.
      * No incluye role, institution_id ni otros campos internos.

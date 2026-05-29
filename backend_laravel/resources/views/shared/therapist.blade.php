@@ -49,6 +49,14 @@
 
 <div class="warning">
   ⚠️ Este reporte es generado automáticamente por Mindra y no reemplaza una evaluación clínica. Los datos provienen del autoregistro del paciente.
+  <div style="margin-top:10px;">
+    <a href="?format=pdf" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:#4f46e5;color:#fff;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
+      ⬇ Descargar PDF
+    </a>
+    <button onclick="window.print()" style="margin-left:8px;padding:7px 16px;background:#fff;color:#475569;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
+      🖨 Imprimir
+    </button>
+  </div>
 </div>
 
 <div class="container">

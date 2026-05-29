@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InferenceRequest;
+use App\Mail\CrisisAlertMail;
 use App\Mail\PlusRequestMail;
+use App\Models\CrisisEvent;
 use App\Models\ProOrder;
 use App\Services\InferenceService;
 use App\Models\InferenceRecord;
@@ -24,8 +26,9 @@ class InferenceController extends Controller
 
     public function predict(InferenceRequest $request)
     {
+        $user   = $request->user();
         $result = $this->inferenceService->predict(
-            $request->user(),
+            $user,
             $request->file('audio'),
             $request->input('texto', ''),
             $request->file('image'),
@@ -36,7 +39,48 @@ class InferenceController extends Controller
             return response()->json(['ok' => false, 'error' => $result['error']], 400);
         }
 
+        // ── Crisis detection: loguear y enviar email si ansiedad > 75% ───────
+        $prob = $result['probabilidad_ansiedad'] ?? 0;
+        if ($prob > 0.75 && $user && isset($result['record'])) {
+            $this->handleCrisisEvent($user, $result['record'], $prob, $result['etiqueta'] ?? '');
+        }
+
         return response()->json($result);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Registra un evento de crisis y envía email si el usuario tiene alertas
+    // ─────────────────────────────────────────────────────────────────────────
+    protected function handleCrisisEvent($user, InferenceRecord $record, float $prob, string $label): void
+    {
+        try {
+            $emailSent = false;
+
+            // Verificar preferencia del usuario para alertas de crisis
+            $pref = $user->notificationPreference;
+            $wantsEmail = $pref ? $pref->crisis_alerts : false;
+
+            if ($wantsEmail) {
+                Mail::to($user->email)->send(new CrisisAlertMail($user, $record));
+                $emailSent = true;
+            }
+
+            CrisisEvent::create([
+                'user_id'             => $user->id,
+                'inference_record_id' => $record->id,
+                'probability'         => $prob,
+                'predicted_label'     => $label,
+                'email_sent'          => $emailSent,
+                'email_sent_at'       => $emailSent ? now() : null,
+                'notes'               => [
+                    'ip'         => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            // No interrumpir la respuesta al usuario si el log de crisis falla
+            Log::error('CrisisEvent log failed: ' . $e->getMessage());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
