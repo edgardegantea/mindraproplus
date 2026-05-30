@@ -18,4 +18,5 @@ Descarga la última versión de la app Mindra para Android.
 
 | Versión | Fecha | Cambios |
 |---------|-------|---------|
+| v1.1.0 | 2026-05-29 | Pantalla respiración, Wear OS, WCAG AA, recordatorios todos los usuarios, chat persistente |
 | v1.0.0 | 2026-05-17 | Primera versión pública |

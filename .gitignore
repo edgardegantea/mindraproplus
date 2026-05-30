@@ -23,3 +23,9 @@ backend_laravel/node_modules/
 # Copia de respaldo antigua
 backend_laravel copy/
 ansiedad_app/
+
+# APK binaries — demasiado grandes para git HTTP; distribuir manualmente
+releases/*.apk
+
+# iOS
+mindra_app/ios/Podfile.lock
