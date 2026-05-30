@@ -61,6 +61,12 @@ else
     grep -q "MINDRABACK_URL"              .env || echo -e "\nMINDRABACK_URL=http://localhost:8001"   >> .env
     grep -q "MINDRABACK_TIMEOUT"          .env || echo -e "MINDRABACK_TIMEOUT=60"                   >> .env
     grep -q "MINDRABACK_CONNECT_TIMEOUT"  .env || echo -e "MINDRABACK_CONNECT_TIMEOUT=8"            >> .env
+    # SESSION_DRIVER=file es crítico: el default de config/session.php es 'database',
+    # lo que requiere una tabla 'sessions' que NO existe en este proyecto.
+    # Sin este valor la app entera devuelve 500 en todas las rutas web.
+    grep -q "SESSION_DRIVER"             .env || echo -e "\nSESSION_DRIVER=file"                    >> .env
+    # CACHE_STORE=file: evita depender de la tabla 'cache' de DB (default en Laravel 12)
+    grep -q "CACHE_STORE"                .env || echo -e "CACHE_STORE=file"                         >> .env
     # Asegurar que app.mindra.cafined.org esté en los dominios stateful de Sanctum
     grep -q "SANCTUM_STATEFUL_DOMAINS" .env || echo -e "\nSANCTUM_STATEFUL_DOMAINS=mindra.cafined.org,app.mindra.cafined.org" >> .env
     grep -q "app\.mindra\.cafined\.org" .env || sed -i.bak 's/SANCTUM_STATEFUL_DOMAINS=mindra\.cafined\.org$/SANCTUM_STATEFUL_DOMAINS=mindra.cafined.org,app.mindra.cafined.org/' .env && rm -f .env.bak
