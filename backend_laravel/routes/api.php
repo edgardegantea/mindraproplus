@@ -21,17 +21,55 @@ use Illuminate\Support\Facades\Route;
 // ── Health check ─────────────────────────────────────────────────────────────
 Route::get('/health', function () {
     $mlHealth = app(\App\Services\AI\MindrabackClient::class)->health();
-    $dbOk     = true;
-    try { \Illuminate\Support\Facades\DB::connection()->getPdo(); } catch (\Exception) { $dbOk = false; }
+
+    // DB connectivity
+    $dbOk  = false;
+    $dbErr = null;
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $dbOk = true;
+    } catch (\Throwable $e) {
+        $dbErr = $e->getMessage();
+    }
+
+    // Session driver (database driver requiere tabla 'sessions' inexistente)
+    $sessionDriver = config('session.driver', 'unknown');
+
+    // Cache driver / store
+    $cacheOk  = false;
+    $cacheErr = null;
+    try {
+        \Illuminate\Support\Facades\Cache::put('_health_check', 1, 5);
+        $cacheOk = \Illuminate\Support\Facades\Cache::get('_health_check') === 1;
+        \Illuminate\Support\Facades\Cache::forget('_health_check');
+    } catch (\Throwable $e) {
+        $cacheErr = $e->getMessage();
+    }
+
+    // Tablas críticas
+    $tables = [];
+    foreach (['users','plans','subscriptions','inference_records','visitor_sessions',
+              'notification_preferences','crisis_events'] as $tbl) {
+        try {
+            $tables[$tbl] = \Illuminate\Support\Facades\Schema::hasTable($tbl) ? 'ok' : 'missing';
+        } catch (\Throwable) {
+            $tables[$tbl] = 'error';
+        }
+    }
+
+    $allOk = $dbOk && $cacheOk && ($mlHealth['reachable'] ?? false);
 
     return response()->json([
-        'status'      => ($dbOk && ($mlHealth['reachable'] ?? false)) ? 'healthy' : 'degraded',
-        'service'     => config('app.name'),
-        'version'     => '2.0.0',
-        'environment' => app()->environment(),
-        'database'    => $dbOk ? 'ok' : 'error',
-        'ml_service'  => $mlHealth,
-    ], ($dbOk && ($mlHealth['reachable'] ?? false)) ? 200 : 503);
+        'status'         => $allOk ? 'healthy' : 'degraded',
+        'service'        => config('app.name'),
+        'version'        => '2.1.0',
+        'environment'    => app()->environment(),
+        'database'       => $dbOk  ? 'ok'   : ['error' => $dbErr],
+        'cache'          => $cacheOk ? 'ok' : ['error' => $cacheErr, 'store' => config('cache.default')],
+        'session_driver' => $sessionDriver,
+        'tables'         => $tables,
+        'ml_service'     => $mlHealth,
+    ], $allOk ? 200 : 503);
 });
 
 // ── Webhooks ─────────────────────────────────────────────────────────────────
