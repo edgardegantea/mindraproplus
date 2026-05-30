@@ -139,7 +139,7 @@ class _BreathingScreenState extends State<BreathingScreen>
             // ── Círculo animado ─────────────────────────────────────────
             AnimatedBuilder(
               animation: _ctrl,
-              builder: (_, __) {
+              builder: (_, _) {
                 return Stack(
                   alignment: Alignment.center,
                   children: [

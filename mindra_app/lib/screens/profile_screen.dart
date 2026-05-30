@@ -111,7 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (_) => const Center(child: CircularProgressIndicator()));
     try {
       final data = await ctx.read<ApiService>().generateTherapistShare();
-      if (!mounted) return;
+      if (!mounted || !ctx.mounted) return;
       Navigator.pop(ctx); // cerrar loader
       final url     = data['url'] as String? ?? '';
       final expires = data['expires_at'] as String? ?? '';
@@ -159,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       );
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted || !ctx.mounted) return;
       Navigator.pop(ctx);
       ScaffoldMessenger.of(ctx).showSnackBar(
           SnackBar(content: Text(e.message), backgroundColor: Colors.red));
@@ -286,7 +286,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               try {
                 await launchUrl(url, mode: LaunchMode.externalApplication);
               } catch (_) {
-                if (!mounted) return;
+                if (!mounted || !context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('No se pudo abrir el contrato')));
               }

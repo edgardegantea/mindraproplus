@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:cross_file/cross_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
@@ -98,6 +97,7 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (_) {}
     // Sin historial: mensaje de bienvenida
+    if (!mounted) return;
     final name = context.read<AuthProvider>().user?.name ?? '';
     if (mounted) {
       setState(() => _messages.add(_Msg(
@@ -141,6 +141,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (ok != true || !mounted) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_kStorageKey);
+    if (!mounted) return;
     final name = context.read<AuthProvider>().user?.name ?? '';
     setState(() {
       _messages.clear();
@@ -233,6 +234,7 @@ class _ChatScreenState extends State<ChatScreen> {
       );
       if (image != null) {
         setState(() => _pendingImage = image);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('📸 Foto capturada — escribe un mensaje y envía para incluir el análisis facial.'),

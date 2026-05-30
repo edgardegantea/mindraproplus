@@ -331,7 +331,7 @@ class _DailyChartState extends State<_DailyChart> {
             barTouchData: BarTouchData(
               touchTooltipData: BarTouchTooltipData(
                 getTooltipColor: (_) => MindraColors.darkSurface,
-                getTooltipItem: (group, _, rod, __) {
+                getTooltipItem: (group, _, rod, _) {
                   final label = (data[group.x]['day_label'] as String?) ?? '';
                   return BarTooltipItem(
                     '$label\n${rod.toY.round()}%',

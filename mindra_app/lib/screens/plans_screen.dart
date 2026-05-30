@@ -1107,7 +1107,7 @@ class _PlusRequestSheetState extends State<_PlusRequestSheet> {
       Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
       const SizedBox(height: 5),
       DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         decoration: _dec('Selecciona'),
         items: items.entries
             .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, style: const TextStyle(fontSize: 13))))

@@ -414,7 +414,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: _categories.length,
-                separatorBuilder: (_, _sep) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   final cat = _categories[i];
                   final selected = cat == _selectedCategory;
@@ -433,7 +433,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
                 itemCount: _filtered.length,
-                separatorBuilder: (_, _sep) => const SizedBox(height: 10),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (_, i) => _ArticleCard(article: _filtered[i]),
               ),
             ),
