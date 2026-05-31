@@ -226,6 +226,11 @@ class User extends Authenticatable
         });
     }
 
+    public function deviceTokens()
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
     public function notificationPreference()
     {
         return $this->hasOne(\App\Models\NotificationPreference::class);

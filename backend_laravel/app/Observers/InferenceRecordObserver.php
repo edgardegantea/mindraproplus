@@ -67,6 +67,16 @@ class InferenceRecordObserver
                 }
             }
 
+            // ── Push notification si hay tokens registrados ───────────────────
+            if ($emailSent || !$throttled) {
+                app(\App\Services\FcmService::class)->sendToUser(
+                    $user,
+                    '⚠️ Alerta de bienestar',
+                    'Mindra detectó indicadores de ansiedad elevada. ¿Cómo te encuentras?',
+                    ['type' => 'crisis_alert', 'record_id' => (string) $record->id]
+                );
+            }
+
             // ── Registrar el evento para auditoría (independiente de plan) ────
             CrisisEvent::create([
                 'user_id'             => $user->id,

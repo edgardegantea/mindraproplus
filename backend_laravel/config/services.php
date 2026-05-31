@@ -56,4 +56,19 @@ return [
         'webhook_secret' => env('MERCADOPAGO_WEBHOOK_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Firebase Cloud Messaging (FCM v1 API)
+    |--------------------------------------------------------------------------
+    | FCM_PROJECT_ID: ID del proyecto Firebase (ej. "mindra-pro-xxxxx")
+    | FCM_CREDENTIALS_PATH: ruta absoluta al JSON de cuenta de servicio Firebase
+    |
+    | Si FCM_PROJECT_ID está vacío, las notificaciones push se desactivan
+    | silenciosamente (feature flag).
+    */
+    'fcm' => [
+        'project_id'       => env('FCM_PROJECT_ID', ''),
+        'credentials_path' => env('FCM_CREDENTIALS_PATH', storage_path('app/firebase-credentials.json')),
+    ],
+
 ];

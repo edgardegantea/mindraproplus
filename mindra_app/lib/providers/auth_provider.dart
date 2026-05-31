@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../models/plan.dart';
 import '../services/api_service.dart';
+import '../services/push_notification_service.dart';
 import '../services/storage_service.dart';
 
 enum AuthState { unknown, authenticated, unauthenticated }
@@ -32,6 +33,11 @@ class AuthProvider extends ChangeNotifier {
   /// true solo después de un registro nuevo, hasta que el onboarding termine.
   bool get needsOnboarding => _needsOnboarding;
 
+  /// Token de sesión actual (útil para guardar en biometría).
+  String? get currentToken => _token;
+
+  String? _token;
+
   Future<void> init() async {
     final token = await _storage.getToken();
     if (token == null) {
@@ -41,6 +47,7 @@ class AuthProvider extends ChangeNotifier {
     }
     try {
       _api.setToken(token);
+      _token = token;
       _user = await _api.me();
       _state = AuthState.authenticated;
       await _loadCurrentPlan();
@@ -49,6 +56,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {
       await _storage.clearToken();
       _api.setToken(null);
+      _token = null;
       _state = AuthState.unauthenticated;
     }
     notifyListeners();
@@ -57,6 +65,18 @@ class AuthProvider extends ChangeNotifier {
   Future<void> login(String email, String password) async {
     final data = await _api.login(email, password);
     await _setSession(data);
+  }
+
+  /// Login usando un token existente (p. ej. recuperado desde biometría).
+  /// Lanza una excepción si el token ya no es válido.
+  Future<void> loginWithToken(String token) async {
+    _api.setToken(token);
+    _user = await _api.me(); // lanza si el token expiró
+    _token = token;
+    await _storage.saveToken(token);
+    _state = AuthState.authenticated;
+    await _loadCurrentPlan();
+    notifyListeners();
   }
 
   Future<void> register(String name, String email, String password) async {
@@ -77,6 +97,7 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {}
     await _storage.clearToken();
     _api.setToken(null);
+    _token = null;
     _user = null;
     _currentPlan = null;
     _state = AuthState.unauthenticated;
@@ -93,10 +114,30 @@ class AuthProvider extends ChangeNotifier {
     final user = AppUser.fromJson(data['user'] as Map<String, dynamic>);
     await _storage.saveToken(token);
     _api.setToken(token);
+    _token = token;
     _user = user;
     _state = AuthState.authenticated;
     await _loadCurrentPlan();
     notifyListeners();
+    // Registrar token FCM en el servidor (best-effort, no bloquea el login)
+    if (!kIsWeb) {
+      _registerFcmToken();
+    }
+  }
+
+  Future<void> _registerFcmToken() async {
+    try {
+      final fcmToken = await PushNotificationService.getToken();
+      if (fcmToken == null) return;
+      final platform = defaultTargetPlatform.name.toLowerCase();
+      await _api.registerDeviceToken(fcmToken, platform: platform);
+      // Renovaciones automáticas de token
+      PushNotificationService.onTokenRefresh.listen((newToken) async {
+        try {
+          await _api.registerDeviceToken(newToken, platform: platform);
+        } catch (_) {}
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadCurrentPlan() async {

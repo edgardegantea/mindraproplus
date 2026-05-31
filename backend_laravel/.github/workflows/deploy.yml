@@ -1,0 +1,29 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+# Secrets requeridos en GitHub → Settings → Secrets and variables → Actions:
+#   PROD_HOST     — IP o hostname del servidor de producción
+#   PROD_USER     — usuario SSH (ej. "mindra" o "root")
+#   PROD_SSH_KEY  — clave privada SSH (contenido completo del archivo id_rsa)
+#   PROD_PORT     — puerto SSH (usualmente 22)
+#   PROD_PATH     — ruta absoluta al directorio del proyecto en el servidor
+#                   (ej. "/var/www/vhosts/mindra.cafined.org/httpdocs")
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_PORT }}
+          script: |
+            cd ${{ secrets.PROD_PATH }}
+            bash deploy.sh

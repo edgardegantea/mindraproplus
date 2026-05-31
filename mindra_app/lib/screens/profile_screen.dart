@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -6,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/api_service.dart' show ApiService, ApiException;
+import '../services/biometric_service.dart';
 import '../services/notification_service.dart';
 import '../theme/mindra_theme.dart';
 import '../utils/responsive.dart';
@@ -355,6 +357,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTap: _showReminderPicker,
           ),
           const SizedBox(height: 16),
+
+          // ── Biometría ─────────────────────────────────────────────────
+          if (!kIsWeb)
+            Consumer<AuthProvider>(
+              builder: (ctx, auth, _) => FutureBuilder<bool>(
+                future: BiometricService.isAvailable(),
+                builder: (ctx, availSnap) {
+                  if (!(availSnap.data ?? false)) return const SizedBox.shrink();
+                  return FutureBuilder<bool>(
+                    future: BiometricService.isEnabled(),
+                    builder: (ctx, enabledSnap) {
+                      final enabled = enabledSnap.data ?? false;
+                      return SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: MindraColors.blue.withValues(alpha: 0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.fingerprint,
+                              color: MindraColors.blue),
+                        ),
+                        title: const Text('Login con huella / Face ID'),
+                        subtitle: const Text(
+                          'Usa biometría para entrar más rápido',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: MindraColors.textSecondary),
+                        ),
+                        value: enabled,
+                        onChanged: (val) async {
+                          if (val) {
+                            final ok = await BiometricService.authenticate();
+                            if (ok) {
+                              final token = auth.currentToken ?? '';
+                              if (token.isNotEmpty) {
+                                await BiometricService.saveTokenForBio(token);
+                                await BiometricService.setEnabled(true);
+                              }
+                            }
+                          } else {
+                            await BiometricService.clearSavedToken();
+                          }
+                          setState(() {});
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
 
           // ── Evaluación GAD-7 ──────────────────────────────────────────
           ListTile(

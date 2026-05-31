@@ -1,0 +1,29 @@
+{
+  "_PLACEHOLDER": "Reemplaza este archivo con google-services.json de Firebase Console",
+  "_instrucciones": [
+    "1. Ir a https://console.firebase.google.com/",
+    "2. Crear proyecto o seleccionar existente",
+    "3. Añadir app Android con package: org.cafined.mindra",
+    "4. Descargar google-services.json y reemplazar este archivo",
+    "5. En Project Settings > Cloud Messaging, copiar el Server Key",
+    "6. En el servidor: FCM_PROJECT_ID=tu-project-id en .env"
+  ],
+  "project_info": {
+    "project_number": "CHANGE_ME",
+    "project_id": "CHANGE_ME",
+    "storage_bucket": "CHANGE_ME.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "CHANGE_ME",
+        "android_info": {
+          "package_name": "org.cafined.mindra"
+        }
+      },
+      "api_key": [{"current_key": "CHANGE_ME"}],
+      "services": {}
+    }
+  ],
+  "configuration_version": "1"
+}

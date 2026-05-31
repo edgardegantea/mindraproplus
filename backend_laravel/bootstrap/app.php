@@ -30,6 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Sentry: capturar excepciones en producción cuando el DSN está configurado
+        if (app()->environment('production') && config('sentry.dsn')) {
+            \Sentry\Laravel\Integration::handles($exceptions);
+        }
+
         // Asegurar que las respuestas de error en rutas API siempre incluyan
         // los headers CORS, incluso cuando la excepción bypasea el middleware.
         $exceptions->respond(function (\Illuminate\Http\Response|\Symfony\Component\HttpFoundation\Response $response, \Throwable $e, \Illuminate\Http\Request $request) {

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\InferenceController;
 use App\Http\Controllers\MercadoPagoWebhookController;
@@ -104,6 +105,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/auth/logout',  [AuthController::class, 'logout']);
     Route::get('/auth/me',       [AuthController::class, 'me']);
+
+    // Device tokens para push notifications (FCM)
+    Route::post('/auth/device-token',   [DeviceTokenController::class, 'register']);
+    Route::delete('/auth/device-token', [DeviceTokenController::class, 'unregister']);
 
     // Perfil de usuario
     Route::patch('/auth/profile',          [ProfileController::class, 'update']);

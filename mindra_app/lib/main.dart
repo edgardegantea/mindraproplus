@@ -1,11 +1,14 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'theme/mindra_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/plan_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/api_service.dart';
+import 'services/push_notification_service.dart';
 import 'services/storage_service.dart';
 import 'services/notification_service.dart';
 import 'screens/auth/login_screen.dart';
@@ -19,28 +22,46 @@ import 'utils/responsive.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Inicializar Firebase y FCM (silenciar si no hay google-services.json real)
+  try {
+    await Firebase.initializeApp();
+    await PushNotificationService.init();
+  } catch (_) {
+    // Si las credenciales de Firebase no están configuradas, la app
+    // sigue funcionando sin push notifications.
+  }
+
   final api      = ApiService();
   final storage  = StorageService();
   final notifs   = NotificationService();
   await notifs.init();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        Provider<ApiService>.value(value: api),
-        Provider<StorageService>.value(value: storage),
-        Provider<NotificationService>.value(value: notifs),
-        ChangeNotifierProvider(
-          create: (_) => AuthProvider(api, storage)..init(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => PlanProvider(api),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => ThemeProvider(storage)..init(),
-        ),
-      ],
-      child: const MindraApp(),
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = const String.fromEnvironment(
+          'SENTRY_DSN', defaultValue: '');
+      options.tracesSampleRate = 0.1;
+      options.environment = const String.fromEnvironment(
+          'APP_ENV', defaultValue: 'production');
+    },
+    appRunner: () => runApp(
+      MultiProvider(
+        providers: [
+          Provider<ApiService>.value(value: api),
+          Provider<StorageService>.value(value: storage),
+          Provider<NotificationService>.value(value: notifs),
+          ChangeNotifierProvider(
+            create: (_) => AuthProvider(api, storage)..init(),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => PlanProvider(api),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => ThemeProvider(storage)..init(),
+          ),
+        ],
+        child: const MindraApp(),
+      ),
     ),
   );
 }

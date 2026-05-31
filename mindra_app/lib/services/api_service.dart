@@ -444,6 +444,37 @@ class ApiService {
     }
   }
 
+  // ── FCM Device Tokens ─────────────────────────────────────────────────────
+
+  /// Registra el token FCM del dispositivo en el servidor.
+  Future<void> registerDeviceToken(String token,
+      {String platform = 'android'}) async {
+    await _post('/auth/device-token', {'token': token, 'platform': platform});
+  }
+
+  /// Elimina el token FCM del servidor (p. ej. al cerrar sesión).
+  Future<void> unregisterDeviceToken(String token) async {
+    await _delete('/auth/device-token', {'token': token});
+  }
+
+  // ── Helpers privados ──────────────────────────────────────────────────────
+
+  Future<void> _post(String path, Map<String, dynamic> body) async {
+    await http.post(
+      Uri.parse('$_baseUrl$path'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+  }
+
+  Future<void> _delete(String path, Map<String, dynamic> body) async {
+    await http.delete(
+      Uri.parse('$_baseUrl$path'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+  }
+
   /// GET /api/chat/history — conversaciones agrupadas por sesión
   Future<List<Map<String, dynamic>>> getChatHistory({int page = 1}) async {
     final res = await http.get(

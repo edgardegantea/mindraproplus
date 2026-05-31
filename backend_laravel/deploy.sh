@@ -67,6 +67,13 @@ else
     grep -q "SESSION_DRIVER"             .env || echo -e "\nSESSION_DRIVER=file"                    >> .env
     # CACHE_STORE=file: evita depender de la tabla 'cache' de DB (default en Laravel 12)
     grep -q "CACHE_STORE"                .env || echo -e "CACHE_STORE=file"                         >> .env
+    # Firebase Cloud Messaging (FCM)
+    grep -q "FCM_PROJECT_ID"             .env || echo -e "\nFCM_PROJECT_ID=CHANGE_ME"               >> .env
+    grep -q "FCM_CREDENTIALS_PATH"       .env || echo -e "FCM_CREDENTIALS_PATH=CHANGE_ME"           >> .env
+    # Sentry error tracking
+    grep -q "SENTRY_LARAVEL_DSN"         .env || echo -e "\nSENTRY_LARAVEL_DSN=CHANGE_ME"           >> .env
+    grep -q "SENTRY_TRACES_SAMPLE_RATE"  .env || echo -e "SENTRY_TRACES_SAMPLE_RATE=0.05"           >> .env
+    grep -q "APP_VERSION"                .env || echo -e "APP_VERSION=2.1.0"                         >> .env
     # Asegurar que app.mindra.cafined.org esté en los dominios stateful de Sanctum
     grep -q "SANCTUM_STATEFUL_DOMAINS" .env || echo -e "\nSANCTUM_STATEFUL_DOMAINS=mindra.cafined.org,app.mindra.cafined.org" >> .env
     grep -q "app\.mindra\.cafined\.org" .env || sed -i.bak 's/SANCTUM_STATEFUL_DOMAINS=mindra\.cafined\.org$/SANCTUM_STATEFUL_DOMAINS=mindra.cafined.org,app.mindra.cafined.org/' .env && rm -f .env.bak

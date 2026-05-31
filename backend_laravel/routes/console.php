@@ -16,3 +16,9 @@ Schedule::command(SendWeeklyReports::class)
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/weekly_reports.log'));
+
+// Recordatorio diario de bienestar — todos los días a las 9:00 AM
+Schedule::job(new \App\Jobs\SendDailyReminderJob())
+    ->dailyAt('09:00')
+    ->timezone('America/Mexico_City')
+    ->withoutOverlapping();

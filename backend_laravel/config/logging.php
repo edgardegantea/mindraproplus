@@ -127,6 +127,13 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'fcm' => [
+            'driver' => 'single',
+            'path'   => storage_path('logs/fcm.log'),
+            'level'  => 'debug',
+            'replace_placeholders' => true,
+        ],
+
     ],
 
 ];

@@ -38,6 +38,12 @@ class StorageService {
     await prefs.setBool(_keyOnboardingDone, true);
   }
 
+  /// Alias compatible con el Feature 3 spec.
+  Future<bool> isOnboardingDone() => getOnboardingCompleted();
+
+  /// Alias compatible con el Feature 3 spec.
+  Future<void> setOnboardingDone() => setOnboardingCompleted();
+
   // ── Preferencias genéricas (clave/valor) ───────────────────────────────────
   Future<String?> getString(String key) async {
     final prefs = await SharedPreferences.getInstance();
